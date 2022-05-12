@@ -1,4 +1,3 @@
-HELP.md
 target/
 src/main/resources/*.properties
 src/test/resources/*.properties

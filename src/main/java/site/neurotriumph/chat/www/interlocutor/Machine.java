@@ -13,6 +13,8 @@ public class Machine extends Interlocutor {
 
   @Override
   public void send(TextMessage message) {
+    // TODO: send http request to neural network api
+
     System.out.println("Message sent to neural network: " + message);
   }
 }

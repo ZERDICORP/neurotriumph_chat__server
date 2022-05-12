@@ -27,7 +27,6 @@ import site.neurotriumph.chat.www.repository.NeuralNetworkRepository;
 public class LobbyService {
   @Value("${lobbySpentTime}")
   private Integer lobbySpentTime;
-
   private final Random random;
   private final ScheduledExecutorService executorService;
   private final List<WebSocketSession> lobby;
@@ -60,7 +59,7 @@ public class LobbyService {
       // at the same time the lobby is empty, we must inform the user
       // about this and abort the work by returning null.
       if (lobby.size() == 0) {
-        session.sendMessage(new TextMessage(Message.NO_ONE_TO_TALK));
+        session.sendMessage(new TextMessage(Message.NO_ONE_TO_TALK)); // TODO: send a normal message (json object)
         session.close();
         return null;
       }
@@ -104,16 +103,16 @@ public class LobbyService {
       // If there is not a single neural network in the database, we must
       // inform the user about this and terminate the function.
       if (neuralNetwork.isEmpty()) {
-        session.sendMessage(new TextMessage(Message.NO_ONE_TO_TALK));
+        session.sendMessage(new TextMessage(Message.NO_ONE_TO_TALK)); // TODO: send a normal message (json object)
         session.close();
         return;
       }
 
       // TODO: create a new room right here
 
-      session.sendMessage(new TextMessage(Message.INTERLOCUTOR_FOUND));
+      session.sendMessage(new TextMessage(Message.INTERLOCUTOR_FOUND)); // TODO: send a normal message (json object)
     } catch (IOException e) {
-      System.out.println("Message sending error: " + e);
+      throw new RuntimeException("Message sending error: " + e);
     }
   }
 }

@@ -42,11 +42,4 @@ public class NeuralNetwork {
 
   @Column(columnDefinition = "INT(11) DEFAULT 0", nullable = false)
   private int tests_failed;
-
-  public NeuralNetwork(Long owner_id, String name, String api_root, String api_secret) {
-    this.owner_id = owner_id;
-    this.name = name;
-    this.api_root = api_root;
-    this.api_secret = api_secret;
-  }
 }

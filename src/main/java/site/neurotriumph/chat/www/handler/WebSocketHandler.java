@@ -25,11 +25,11 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
       // TODO: create a new room right here
 
-      session.sendMessage(new TextMessage(Message.INTERLOCUTOR_FOUND));
+      session.sendMessage(new TextMessage(Message.INTERLOCUTOR_FOUND)); // TODO: send a normal message (json object)
       // For the found interlocutor, obviously, we will report the possibility
       // of starting a dialogue only if the interlocutor is a human.
       if (interlocutor.isHuman()) {
-        interlocutor.send(new TextMessage(Message.INTERLOCUTOR_FOUND));
+        interlocutor.send(new TextMessage(Message.INTERLOCUTOR_FOUND)); // TODO: send a normal message (json object)
       }
     }
   }
