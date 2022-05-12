@@ -39,6 +39,9 @@ spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MariaDB103Dialect
 server.port=8000
 server.error.include-message=always
 server.servlet.context-path=/api/v1
+
+# Custom settings
+lobbySpentTime=30000
 ```
 
 #### 4. Add file `src/test/resources/test.properties` with the following content
@@ -62,6 +65,9 @@ spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MariaDB103Dialect
 server.port=8000
 server.error.include-message=always
 server.servlet.context-path=/api/v1
+
+# Custom settings
+lobbySpentTime=0
 ```
 
 #### 5. Now you can run the project :tada:
