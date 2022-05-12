@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -81,12 +82,35 @@ public class FindInterlocutorIntegrationTest {
 
       @Override
       public void onError(Exception ex) {
-        ex.printStackTrace();
       }
     }.connectBlocking();
 
     // TODO: deserialize the message
 
     assertEquals(Message.INTERLOCUTOR_FOUND, blockingQueue.poll(2, TimeUnit.SECONDS));
+  }
+
+  @Test
+  public void shouldConnectSuccessfully() throws Exception {
+    WebSocketClient webSocketClient = new WebSocketClient(new URI(baseUrl)) {
+      @Override
+      public void onOpen(ServerHandshake serverHandshake) {
+      }
+
+      @Override
+      public void onMessage(String message) {
+      }
+
+      @Override
+      public void onClose(int code, String reason, boolean remote) {
+      }
+
+      @Override
+      public void onError(Exception ex) {
+      }
+    };
+    webSocketClient.connectBlocking();
+
+    assertTrue(webSocketClient.isOpen());
   }
 }
