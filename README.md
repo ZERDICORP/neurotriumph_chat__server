@@ -23,6 +23,8 @@ MariaDB> exit;
 ```
 # Custom Application Configuration
 app.secret=abc123
+app.lobby_spent_time=30000
+app.chat_messaging_delay=5000
 
 # Database Configuration
 spring.datasource.driver-class-name=org.mariadb.jdbc.Driver
@@ -39,9 +41,6 @@ spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MariaDB103Dialect
 server.port=8000
 server.error.include-message=always
 server.servlet.context-path=/api/v1
-
-# Custom settings
-lobbySpentTime=30000
 ```
 
 #### 4. Add file `src/test/resources/test.properties` with the following content
@@ -49,6 +48,8 @@ lobbySpentTime=30000
 ```
 # Custom Application Configuration
 app.secret=abc123
+app.lobby_spent_time=0
+app.chat_messaging_delay=5000
 
 # Database Configuration
 spring.datasource.driver-class-name=org.mariadb.jdbc.Driver
@@ -65,9 +66,6 @@ spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MariaDB103Dialect
 server.port=8000
 server.error.include-message=always
 server.servlet.context-path=/api/v1
-
-# Custom settings
-lobbySpentTime=0
 ```
 
 #### 5. Now you can run the project :tada:
