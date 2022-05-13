@@ -1,9 +1,14 @@
 package site.neurotriumph.chat.www.interlocutor;
 
-import org.springframework.web.socket.TextMessage;
+import java.io.IOException;
+import lombok.Getter;
 import site.neurotriumph.chat.www.entity.NeuralNetwork;
+import site.neurotriumph.chat.www.pojo.ChatMessageEvent;
+import site.neurotriumph.chat.www.pojo.Event;
 
 public class Machine extends Interlocutor {
+  @Getter
+  private ChatMessageEvent response;
   private final NeuralNetwork neuralNetwork;
 
   public Machine(NeuralNetwork neuralNetwork) {
@@ -12,9 +17,10 @@ public class Machine extends Interlocutor {
   }
 
   @Override
-  public void send(TextMessage message) {
-    // TODO: send http request to neural network api
+  public void send(Event event) throws IOException {
+    response = new ChatMessageEvent("Hello, world!"); // TODO: send http request to neural network api
 
-    System.out.println("Message sent to neural network: " + message);
+    System.out.println("Message: " + objectMapper.writeValueAsString(event) + ", was sent to API: " +
+      neuralNetwork.getApi_root());
   }
 }

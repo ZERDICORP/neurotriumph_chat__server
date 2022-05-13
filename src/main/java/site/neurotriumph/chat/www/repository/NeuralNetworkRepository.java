@@ -8,6 +8,6 @@ import site.neurotriumph.chat.www.entity.NeuralNetwork;
 
 @Repository
 public interface NeuralNetworkRepository extends JpaRepository<NeuralNetwork, Long> {
-  @Query(value = "SELECT * FROM neural_network ORDER BY RAND() LIMIT 1", nativeQuery = true)
+  @Query(value = "SELECT * FROM neural_network WHERE active = true ORDER BY RAND() LIMIT 1", nativeQuery = true)
   Optional<NeuralNetwork> findOneRandom();
 }

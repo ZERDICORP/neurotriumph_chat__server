@@ -1,10 +1,16 @@
 package site.neurotriumph.chat.www.interlocutor;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
-import org.springframework.web.socket.TextMessage;
+import site.neurotriumph.chat.www.pojo.Event;
 
 public abstract class Interlocutor {
-  private final boolean isHuman;
+  protected final ObjectMapper objectMapper;
+  protected final boolean isHuman;
+
+  {
+    objectMapper = new ObjectMapper();
+  }
 
   public Interlocutor(boolean isHuman) {
     this.isHuman = isHuman;
@@ -14,5 +20,5 @@ public abstract class Interlocutor {
     return isHuman;
   }
 
-  public abstract void send(TextMessage message) throws IOException;
+  public abstract void send(Event Event) throws IOException;
 }

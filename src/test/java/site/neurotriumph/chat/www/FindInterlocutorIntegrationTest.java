@@ -1,5 +1,6 @@
 package site.neurotriumph.chat.www;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -7,24 +8,32 @@ import java.util.concurrent.TimeUnit;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.junit4.SpringRunner;
-import site.neurotriumph.chat.www.constant.Message;
+import site.neurotriumph.chat.www.pojo.Event;
+import site.neurotriumph.chat.www.pojo.EventType;
+import site.neurotriumph.chat.www.pojo.InterlocutorFoundEvent;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @TestPropertySource("/test.properties")
 public class FindInterlocutorIntegrationTest {
+  private String baseUrl;
+
   @LocalServerPort
   private int serverPort;
-  private String baseUrl;
+
+  @Autowired
+  private ObjectMapper objectMapper;
 
   @Before
   public void setup() {
@@ -55,9 +64,10 @@ public class FindInterlocutorIntegrationTest {
       }
     }.connectBlocking();
 
-    // TODO: deserialize the message
+    Event event = objectMapper.readValue(blockingQueue.poll(2, TimeUnit.SECONDS), Event.class);
 
-    assertEquals(Message.NO_ONE_TO_TALK, blockingQueue.poll(2, TimeUnit.SECONDS));
+    assertNotNull(event);
+    assertEquals(EventType.NO_ONE_TO_TALK, event.getType());
   }
 
   @Test
@@ -85,9 +95,12 @@ public class FindInterlocutorIntegrationTest {
       }
     }.connectBlocking();
 
-    // TODO: deserialize the message
+    InterlocutorFoundEvent interlocutorFoundEvent = objectMapper.readValue(
+      blockingQueue.poll(2, TimeUnit.SECONDS), InterlocutorFoundEvent.class);
 
-    assertEquals(Message.INTERLOCUTOR_FOUND, blockingQueue.poll(2, TimeUnit.SECONDS));
+    assertNotNull(interlocutorFoundEvent);
+    assertNotNull(interlocutorFoundEvent.getTimeLabel());
+    assertEquals(EventType.INTERLOCUTOR_FOUND, interlocutorFoundEvent.getType());
   }
 
   @Test
