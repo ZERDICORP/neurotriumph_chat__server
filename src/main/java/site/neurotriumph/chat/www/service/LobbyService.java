@@ -22,9 +22,7 @@ import site.neurotriumph.chat.www.interlocutor.Interlocutor;
 import site.neurotriumph.chat.www.interlocutor.Machine;
 import site.neurotriumph.chat.www.pojo.Event;
 import site.neurotriumph.chat.www.pojo.EventType;
-import site.neurotriumph.chat.www.pojo.InterlocutorFoundEvent;
 import site.neurotriumph.chat.www.repository.NeuralNetworkRepository;
-import site.neurotriumph.chat.www.room.Room;
 
 @Service
 @Scope(value = ConfigurableBeanFactory.SCOPE_SINGLETON)
@@ -47,19 +45,22 @@ public class LobbyService {
     scheduledTasks = new HashMap<>();
   }
 
-  public void exclude(Human human) {
-    lobby.remove(human);
+  public void exclude(Interlocutor interlocutor) {
+    if (lobby.contains(interlocutor)) {
+      lobby.remove(interlocutor);
+      scheduledTasks.remove(interlocutor).cancel(false);
+    }
   }
 
-  public Interlocutor findInterlocutor(Interlocutor connectedInterlocutor) throws IOException {
+  public Interlocutor findInterlocutor(Interlocutor joinedInterlocutor) throws IOException {
     // Using the Random::nextInt() function with parameter 2 (which means
     // getting one of two numbers - 0 or 1), we choose with whom the user
     // will communicate, with a machine (neural network) or with a person
     // (another web socket session).
-    final int choice = random.nextInt(2);
+    final int rand = random.nextInt(2);
 
-    // When choice == 0, we take a neural network as an interlocutor.
-    if (choice == 0) {
+    // When rand == 0, we take a neural network as an interlocutor.
+    if (rand == 0) {
       final Optional<NeuralNetwork> neuralNetwork = neuralNetworkRepository.findOneRandom();
       if (neuralNetwork.isPresent()) {
         return new Machine(neuralNetwork.get());
@@ -69,12 +70,13 @@ public class LobbyService {
       // at the same time the lobby is empty, we must inform the user
       // about this and abort the work by returning null.
       if (lobby.size() == 0) {
-        connectedInterlocutor.send(new Event(EventType.NO_ONE_TO_TALK));
+        joinedInterlocutor.send(new Event(EventType.NO_ONE_TO_TALK));
+        ((Human) joinedInterlocutor).close();
         return null;
       }
     }
 
-    // Else, when choice == 1, we take another websocket session as the
+    // Else, when rand == 1, we take another websocket session as the
     // interlocutor.
 
     // Why is there a synchronous block here? Imagine that the lobby list
@@ -102,12 +104,12 @@ public class LobbyService {
     // Else, if the lobby list is empty, we add a user there in the
     // expectation that another user will come and choose us as an
     // interlocutor.
-    lobby.add(connectedInterlocutor);
+    lobby.add(joinedInterlocutor);
 
     // After N seconds, we have to check whether someone invited us or not.
-    scheduledTasks.put(connectedInterlocutor, executorService.schedule(() -> {
+    scheduledTasks.put(joinedInterlocutor, executorService.schedule(() -> {
       try {
-        afterSpentTimeInLobby(connectedInterlocutor);
+        afterSpentTimeInLobby(joinedInterlocutor);
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
@@ -118,7 +120,7 @@ public class LobbyService {
     return null;
   }
 
-  public void afterSpentTimeInLobby(Interlocutor connectedInterlocutor) throws IOException {
+  public void afterSpentTimeInLobby(Interlocutor joinedInterlocutor) throws IOException {
     // Yes, it may happen that the scheduled task is running, but the user as
     // already been removed from the lobby. Take a look at the explanation
     // below:
@@ -130,15 +132,15 @@ public class LobbyService {
     // That is, a scheduled task can be executed after the user is removed
     // from the list, but even before it is canceled. So we need to make sure
     // the user is still in the lobby.
-    if (!lobby.contains(connectedInterlocutor)) {
+    if (!lobby.contains(joinedInterlocutor)) {
       return;
     }
 
     // Since we are waiting too long, we remove our session from the list.
-    lobby.remove(connectedInterlocutor);
+    lobby.remove(joinedInterlocutor);
 
     // Removing a scheduled task.
-    scheduledTasks.remove(connectedInterlocutor);
+    scheduledTasks.remove(joinedInterlocutor);
 
     // Since no one invited us, we will have to look for an interlocutor
     // from the list of machines.
@@ -146,13 +148,11 @@ public class LobbyService {
     // If there are no neural networks, then we need to inform the user
     // that there really is no one to talk to yet.
     if (neuralNetwork.isEmpty()) {
-      connectedInterlocutor.send(new Event(EventType.NO_ONE_TO_TALK));
+      joinedInterlocutor.send(new Event(EventType.NO_ONE_TO_TALK));
+      ((Human) joinedInterlocutor).close();
       return;
     }
 
-    Room room = roomService.create(connectedInterlocutor, new Machine(neuralNetwork.get()));
-
-    // Inform the user that he can start sending a message.
-    connectedInterlocutor.send(new InterlocutorFoundEvent(room.getTimePoint(), true));
+    roomService.create(joinedInterlocutor, new Machine(neuralNetwork.get()));
   }
 }

@@ -19,6 +19,10 @@ public class Human extends Interlocutor {
     webSocketSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(event)));
   }
 
+  public void close() throws IOException {
+    webSocketSession.close();
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o)

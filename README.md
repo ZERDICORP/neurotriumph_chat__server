@@ -49,7 +49,7 @@ server.servlet.context-path=/api/v1
 # Custom Application Configuration
 app.secret=abc123
 app.lobby_spent_time=0
-app.chat_messaging_delay=5000
+app.chat_messaging_delay=0
 
 # Database Configuration
 spring.datasource.driver-class-name=org.mariadb.jdbc.Driver

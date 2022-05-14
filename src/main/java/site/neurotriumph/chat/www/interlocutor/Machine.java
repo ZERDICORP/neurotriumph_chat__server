@@ -18,7 +18,7 @@ public class Machine extends Interlocutor {
 
   @Override
   public void send(Event event) throws IOException {
-    response = new ChatMessageEvent("Hello, world!"); // TODO: send http request to neural network api
+    response = new ChatMessageEvent("Hello, world!"); // TODO: send http request to the neural network api
 
     System.out.println("Message: " + objectMapper.writeValueAsString(event) + ", was sent to API: " +
       neuralNetwork.getApi_root());

@@ -29,9 +29,7 @@ import site.neurotriumph.chat.www.interlocutor.Interlocutor;
 import site.neurotriumph.chat.www.interlocutor.Machine;
 import site.neurotriumph.chat.www.pojo.Event;
 import site.neurotriumph.chat.www.pojo.EventType;
-import site.neurotriumph.chat.www.pojo.InterlocutorFoundEvent;
 import site.neurotriumph.chat.www.repository.NeuralNetworkRepository;
-import site.neurotriumph.chat.www.room.Room;
 import site.neurotriumph.chat.www.service.LobbyService;
 import site.neurotriumph.chat.www.service.RoomService;
 import site.neurotriumph.chat.www.util.SpiedRandom;
@@ -50,7 +48,7 @@ public class FindInterlocutorUnitTest {
   private NeuralNetworkRepository neuralNetworkRepository;
 
   @Test
-  public void afterSpentTimeInLobby_shouldCreateRoomAndSendEventToTheUser() throws IOException {
+  public void afterSpentTimeInLobby_shouldCreateRoom() throws IOException {
     Human spiedHuman = Mockito.mock(Human.class);
     Mockito.doNothing()
       .when(spiedHuman)
@@ -74,12 +72,6 @@ public class FindInterlocutorUnitTest {
     Mockito.when(neuralNetworkRepository.findOneRandom())
       .thenReturn(Optional.of(new NeuralNetwork()));
 
-    Room room = new Room(null, null);
-    Mockito.when(roomService.create(
-        ArgumentMatchers.eq(spiedHuman),
-        ArgumentMatchers.any(Machine.class)))
-      .thenReturn(room);
-
     lobbyService.afterSpentTimeInLobby(spiedHuman);
 
     Mockito.verify(spiedLobby, Mockito.times(1))
@@ -98,13 +90,10 @@ public class FindInterlocutorUnitTest {
       .create(
         ArgumentMatchers.eq(spiedHuman),
         ArgumentMatchers.any(Machine.class));
-
-    Mockito.verify(spiedHuman, Mockito.times(1))
-      .send(ArgumentMatchers.eq(new InterlocutorFoundEvent(room.getTimePoint(), true)));
   }
 
   @Test
-  public void afterSpentTimeInLobby_shouldTerminateBecauseNeuralNetworkIsEmpty() throws IOException {
+  public void afterSpentTimeInLobby_shouldTerminateMethodBecauseNeuralNetworkIsEmpty() throws IOException {
     Human spiedHuman = Mockito.mock(Human.class);
     Mockito.doNothing()
       .when(spiedHuman)
@@ -152,7 +141,7 @@ public class FindInterlocutorUnitTest {
   }
 
   @Test
-  public void afterSpentTimeInLobby_shouldTerminateBecauseLobbyNotContainsUser() throws IOException {
+  public void afterSpentTimeInLobby_shouldTerminateMethodBecauseLobbyNotContainsUser() throws IOException {
     Human human = new Human(null);
 
     List<Human> spiedLobby = Mockito.spy(new ArrayList<>());
