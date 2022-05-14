@@ -100,8 +100,7 @@ public class SendMessageIntegrationTest {
     assertNotNull(interlocutorFoundEvent.getTimeLabel());
     assertEquals(EventType.INTERLOCUTOR_FOUND, interlocutorFoundEvent.getType());
 
-    ChatMessageEvent chatMessageEvent = (ChatMessageEvent) blockingQueue.poll(2000,
-      TimeUnit.MILLISECONDS);
+    ChatMessageEvent chatMessageEvent = (ChatMessageEvent) blockingQueue.poll(2, TimeUnit.SECONDS);
     assertNotNull(chatMessageEvent);
     assertEquals(EventType.CHAT_MESSAGE, chatMessageEvent.getType());
     assertEquals("Hello, world!", chatMessageEvent.getMessage());

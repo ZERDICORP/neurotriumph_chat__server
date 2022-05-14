@@ -28,7 +28,7 @@ import site.neurotriumph.chat.www.repository.NeuralNetworkRepository;
 @Scope(value = ConfigurableBeanFactory.SCOPE_SINGLETON)
 public class LobbyService {
   @Value("${app.lobby_spent_time}")
-  public long lobby_spent_time;
+  private long lobby_spent_time;
   @Autowired
   private NeuralNetworkRepository neuralNetworkRepository;
   @Autowired
@@ -45,10 +45,10 @@ public class LobbyService {
     scheduledTasks = new HashMap<>();
   }
 
-  public void exclude(Interlocutor interlocutor) {
-    if (lobby.contains(interlocutor)) {
-      lobby.remove(interlocutor);
-      scheduledTasks.remove(interlocutor).cancel(false);
+  public void onUserDisconnect(Interlocutor user) {
+    final boolean removed = lobby.remove(user);
+    if (removed) {
+      scheduledTasks.remove(user).cancel(false);
     }
   }
 

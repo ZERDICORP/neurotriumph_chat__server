@@ -243,6 +243,9 @@ public class SendMessageUnitTest {
     Mockito.verify(spiedSecondInterlocutor, Mockito.times(1))
       .isHuman();
 
+    Mockito.verify(spiedRoom, Mockito.times(1))
+      .increaseMessageCounter();
+
     Mockito.verify(spiedRoomService, Mockito.times(1))
       .sendMachineResponse(
         ArgumentMatchers.eq(null),

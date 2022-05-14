@@ -19,16 +19,22 @@ import org.springframework.stereotype.Service;
 import site.neurotriumph.chat.www.interlocutor.Interlocutor;
 import site.neurotriumph.chat.www.interlocutor.Machine;
 import site.neurotriumph.chat.www.pojo.ChatMessageEvent;
+import site.neurotriumph.chat.www.pojo.Choice;
+import site.neurotriumph.chat.www.pojo.DisconnectEvent;
+import site.neurotriumph.chat.www.pojo.DisconnectReason;
 import site.neurotriumph.chat.www.pojo.Event;
 import site.neurotriumph.chat.www.pojo.EventType;
 import site.neurotriumph.chat.www.pojo.InterlocutorFoundEvent;
+import site.neurotriumph.chat.www.pojo.MakeChoiceEvent;
 import site.neurotriumph.chat.www.room.Room;
 
 @Service
 @Scope(value = ConfigurableBeanFactory.SCOPE_SINGLETON)
 public class RoomService {
   @Value("${app.chat_messaging_delay}")
-  public long chat_messaging_delay;
+  private long chat_messaging_delay;
+  @Value("${app.required_number_of_messages_to_make_a_choice}")
+  private long required_number_of_messages_to_make_a_choice;
   private final ScheduledExecutorService executorService;
   private final Random random;
   private final List<Room> rooms;
@@ -41,21 +47,81 @@ public class RoomService {
     scheduledTasks = new HashMap<>();
   }
 
-  public void exclude(Interlocutor interlocutor) {
-    // TODO: remove room and notify another interlocutor
-
-    // Deleting a scheduled task.
+  public void removeAndCancelScheduledTask(Interlocutor interlocutor) {
     ScheduledFuture<?> scheduledTask = scheduledTasks.remove(interlocutor);
     if (scheduledTask != null) {
       scheduledTask.cancel(false);
     }
   }
 
-  public void sendMessage(Interlocutor sender, ChatMessageEvent chatMessageEvent) throws IOException {
-    final Optional<Room> foundRoom = rooms.stream()
+  public Optional<Room> findRoom(Interlocutor sender) {
+    return rooms.stream()
       .filter(r -> r.has(sender))
       .findFirst();
+  }
 
+  public void onUserDisconnect(Interlocutor user) throws IOException {
+    final Optional<Room> foundRoom = findRoom(user);
+    if (foundRoom.isEmpty()) {
+      return;
+    }
+
+    final Room room = foundRoom.get();
+    final Interlocutor interlocutor = room.getAnother(user);
+
+    if (interlocutor.isHuman()) {
+      interlocutor.send(new DisconnectEvent(DisconnectReason.INTERLOCUTOR_DISCONNECTED));
+    }
+
+    rooms.remove(room);
+    // If the interlocutor is a machine, then the possible scheduled task
+    // should be removed and canceled.
+    removeAndCancelScheduledTask(user);
+  }
+
+  public void makeChoice(Interlocutor sender, MakeChoiceEvent makeChoiceEvent) throws IOException {
+    final Optional<Room> foundRoom = findRoom(sender);
+    if (foundRoom.isEmpty()) {
+      return;
+    }
+
+    final Room room = foundRoom.get();
+    // You can make a choice only after the N-th number of messages.
+    if (room.getMessageCounter() < required_number_of_messages_to_make_a_choice) {
+      return;
+    }
+
+    final Interlocutor interlocutor = room.getAnother(sender);
+    // If the interlocutor is a person, we will inform him that he is
+    // disconnected from the chat, since his interlocutor has make a
+    // choice.
+    if (interlocutor.isHuman()) {
+      interlocutor.send(new DisconnectEvent(DisconnectReason.INTERLOCUTOR_MAKE_A_CHOICE));
+    }
+
+    rooms.remove(room);
+    // If the interlocutor is a machine, then the possible scheduled task
+    // should be removed and canceled.
+    removeAndCancelScheduledTask(sender);
+
+    // The user finds it difficult to choose.
+    if (makeChoiceEvent.getChoice() == Choice.IDK) {
+      sender.send(new Event(interlocutor.isHuman() ?
+        EventType.IT_WAS_A_HUMAN : EventType.IT_WAS_A_MACHINE));
+      return;
+    }
+
+    if ((makeChoiceEvent.getChoice() == Choice.ITS_A_HUMAN && interlocutor.isHuman()) ||
+      (makeChoiceEvent.getChoice() == Choice.ITS_A_MACHINE && !interlocutor.isHuman())) {
+      sender.send(new Event(EventType.YOU_ARE_RIGHT));
+      return;
+    }
+
+    sender.send(new Event(EventType.YOU_ARE_WRONG));
+  }
+
+  public void sendMessage(Interlocutor sender, ChatMessageEvent chatMessageEvent) throws IOException {
+    final Optional<Room> foundRoom = findRoom(sender);
     if (foundRoom.isEmpty()) {
       return;
     }
@@ -87,15 +153,15 @@ public class RoomService {
     // We swap interlocutors in order to prohibit the sender from sending messages,
     // and at the same time allow the recipient to do so.
     room.swapInterlocutors();
+    // It is necessary to increase the message counter to check if there are enough
+    // messages in the chat so that the user can make a choice (a machine is talking
+    // to him, or a human).
+    room.increaseMessageCounter();
 
     if (secondInterlocutor.isHuman()) {
       // We update the time point so that the recipient cannot immediately send the
       // message.
       room.updateTimePoint();
-      // It is necessary to increase the message counter to check if there are enough
-      // messages in the chat so that the user can make a choice (a machine is talking
-      // to him, or a human).
-      room.increaseMessageCounter();
     } else {
       // Since secondInterlocutor is a machine, it means that the message was sent
       // to the API, and we should have received a response, which we then send to

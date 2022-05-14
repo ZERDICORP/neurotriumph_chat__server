@@ -48,4 +48,9 @@ public class Room {
   public Interlocutor getSecondInterlocutor() {
     return interlocutors.get(1);
   }
+
+  public Interlocutor getAnother(Interlocutor sender) {
+    return getFirstInterlocutor().equals(sender) ?
+      getSecondInterlocutor() : getFirstInterlocutor();
+  }
 }
