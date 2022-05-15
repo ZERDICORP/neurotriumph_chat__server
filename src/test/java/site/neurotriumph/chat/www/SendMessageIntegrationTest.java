@@ -54,8 +54,8 @@ public class SendMessageIntegrationTest {
   @Test
   @Sql(value = {"/sql/insert_neural_network.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
   @Sql(value = {"/sql/truncate_neural_network.sql"}, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-  public void shouldReturnInterlocutorFoundMessage() throws Exception {
-    BlockingQueue<Event> blockingQueue = new ArrayBlockingQueue<>(2);
+  public void shouldReceiveChatMessage() throws Exception {
+    BlockingQueue<Event> blockingQueue = new ArrayBlockingQueue<>(1);
 
     new WebSocketClient(new URI(baseUrl)) {
       @Override
@@ -74,8 +74,6 @@ public class SendMessageIntegrationTest {
               if (interlocutorFoundEvent.isAbleToWrite()) {
                 send(objectMapper.writeValueAsString(new ChatMessageEvent("Hello, world!")));
               }
-
-              blockingQueue.add(interlocutorFoundEvent);
             }
             case CHAT_MESSAGE -> blockingQueue.add(objectMapper.readValue(message,
               ChatMessageEvent.class));
@@ -93,12 +91,6 @@ public class SendMessageIntegrationTest {
       public void onError(Exception ex) {
       }
     }.connectBlocking();
-
-    InterlocutorFoundEvent interlocutorFoundEvent = (InterlocutorFoundEvent) blockingQueue.poll(2,
-      TimeUnit.SECONDS);
-    assertNotNull(interlocutorFoundEvent);
-    assertNotNull(interlocutorFoundEvent.getTimeLabel());
-    assertEquals(EventType.INTERLOCUTOR_FOUND, interlocutorFoundEvent.getType());
 
     ChatMessageEvent chatMessageEvent = (ChatMessageEvent) blockingQueue.poll(2, TimeUnit.SECONDS);
     assertNotNull(chatMessageEvent);

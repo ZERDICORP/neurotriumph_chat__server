@@ -11,6 +11,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import javax.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
@@ -54,6 +55,7 @@ public class LobbyService {
     }
   }
 
+  @Transactional
   public Interlocutor findInterlocutor(Interlocutor joinedInterlocutor) {
     // Using the Random::nextInt() function with parameter 2 (which means
     // getting one of two numbers - 0 or 1), we choose with whom the user
@@ -63,9 +65,15 @@ public class LobbyService {
 
     // When rand == 0, we take a neural network as an interlocutor.
     if (rand == 0) {
-      final Optional<NeuralNetwork> neuralNetwork = neuralNetworkRepository.findOneRandom();
-      if (neuralNetwork.isPresent()) {
-        return new Machine(neuralNetwork.get());
+      final Optional<NeuralNetwork> foundNeuralNetwork = neuralNetworkRepository.findOneRandom();
+      if (foundNeuralNetwork.isPresent()) {
+        final NeuralNetwork neuralNetwork = foundNeuralNetwork.get();
+        return new Machine(neuralNetwork)
+          .onError(() -> {
+            // TODO: neuralNetwork.setInvalidApi(true);
+            neuralNetwork.setActive(false);
+            neuralNetworkRepository.save(neuralNetwork);
+          });
       }
     }
 
