@@ -33,7 +33,7 @@ import site.neurotriumph.chat.www.room.Room;
 public class RoomService {
   @Value("${app.chat_messaging_delay}")
   private long chatMessagingDelay;
-  @Value("${app.required_number_of_messages_make_a_choice}")
+  @Value("${app.required_number_of_messages_to_make_a_choice}")
   private long requiredNumberOfMessagesToMakeChoice;
   private final ScheduledExecutorService executorService;
   private final Random random;

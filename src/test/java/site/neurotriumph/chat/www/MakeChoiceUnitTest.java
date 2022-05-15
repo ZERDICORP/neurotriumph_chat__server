@@ -27,7 +27,7 @@ import site.neurotriumph.chat.www.service.RoomService;
 @RunWith(SpringRunner.class)
 @SpringBootTest
 public class MakeChoiceUnitTest {
-  @Value("${app.required_number_of_messages_make_a_choice}")
+  @Value("${app.required_number_of_messages_to_make_a_choice}")
   public int requiredNumberOfMessagesToMakeChoice;
   @Autowired
   private RoomService roomService;
