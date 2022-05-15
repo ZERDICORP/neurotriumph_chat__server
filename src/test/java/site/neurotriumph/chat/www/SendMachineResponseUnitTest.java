@@ -25,7 +25,7 @@ public class SendMachineResponseUnitTest {
   @Test
   public void shouldScheduleTaskAndPutItIntoScheduledTasksThanSendMessageAndUpdateRoom() throws IOException,
     InterruptedException {
-    ReflectionTestUtils.setField(roomService, "chat_messaging_delay", 0);
+    ReflectionTestUtils.setField(roomService, "chatMessagingDelay", 0);
 
     Room spiedRoom = Mockito.spy(new Room(null, null));
 

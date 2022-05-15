@@ -25,7 +25,7 @@ MariaDB> exit;
 app.secret=abc123
 app.lobby_spent_time=30000
 app.chat_messaging_delay=5000
-app.required_number_of_messages_to_make_a_choice=10
+app.required_number_of_messages_make_a_choice=10
 
 # Database Configuration
 spring.datasource.driver-class-name=org.mariadb.jdbc.Driver
@@ -51,7 +51,7 @@ server.servlet.context-path=/api/v1
 app.secret=abc123
 app.lobby_spent_time=0
 app.chat_messaging_delay=0
-app.required_number_of_messages_to_make_a_choice=0
+app.required_number_of_messages_make_a_choice=0
 
 # Database Configuration
 spring.datasource.driver-class-name=org.mariadb.jdbc.Driver

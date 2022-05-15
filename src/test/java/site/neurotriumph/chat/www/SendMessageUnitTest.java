@@ -24,7 +24,7 @@ import site.neurotriumph.chat.www.service.RoomService;
 @SpringBootTest
 public class SendMessageUnitTest {
   @Value("${app.chat_messaging_delay}")
-  public long chat_messaging_delay;
+  public long chatMessagingDelay;
   @Autowired
   private RoomService roomService;
 
@@ -196,7 +196,7 @@ public class SendMessageUnitTest {
       .send(ArgumentMatchers.eq(chatMessageEvent));
 
     Date spiedTimePoint = Mockito.spy(new Date());
-    Mockito.doReturn(new Date().getTime() - chat_messaging_delay)
+    Mockito.doReturn(new Date().getTime() - chatMessagingDelay)
       .when(spiedTimePoint)
       .getTime();
 
@@ -268,7 +268,7 @@ public class SendMessageUnitTest {
       .send(ArgumentMatchers.eq(chatMessageEvent));
 
     Date spiedTimePoint = Mockito.spy(new Date());
-    Mockito.doReturn(new Date().getTime() - chat_messaging_delay)
+    Mockito.doReturn(new Date().getTime() - chatMessagingDelay)
       .when(spiedTimePoint)
       .getTime();
 

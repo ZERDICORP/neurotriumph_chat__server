@@ -39,7 +39,7 @@ import site.neurotriumph.chat.www.util.SpiedScheduledFuture;
 @SpringBootTest
 public class FindInterlocutorUnitTest {
   @Value("${app.lobby_spent_time}")
-  private long lobby_spent_time;
+  private long lobbySpentTime;
   @Autowired
   private LobbyService lobbyService;
   @MockBean
@@ -157,7 +157,7 @@ public class FindInterlocutorUnitTest {
   }
 
   @Test
-  public void shouldAddHumanToLobbyThenScheduleRunnableAndReturnNullBecauseLobbySizeIsZero() throws IOException {
+  public void shouldAddHumanToLobbyThenScheduleRunnableAndReturnNullBecauseLobbySizeIsZero() {
     Human human = new Human(null);
 
     SpiedRandom spiedRandom = Mockito.spy(new SpiedRandom());
@@ -181,7 +181,7 @@ public class FindInterlocutorUnitTest {
       .when(spiedExecutorService)
       .schedule(
         ArgumentMatchers.any(Runnable.class),
-        ArgumentMatchers.eq(lobby_spent_time),
+        ArgumentMatchers.eq(lobbySpentTime),
         ArgumentMatchers.eq(TimeUnit.MILLISECONDS));
 
     Interlocutor interlocutor = lobbyService.findInterlocutor(human);
@@ -199,7 +199,7 @@ public class FindInterlocutorUnitTest {
     Mockito.verify(spiedExecutorService, Mockito.times(1))
       .schedule(
         ArgumentMatchers.any(Runnable.class),
-        ArgumentMatchers.eq(lobby_spent_time),
+        ArgumentMatchers.eq(lobbySpentTime),
         ArgumentMatchers.eq(TimeUnit.MILLISECONDS));
   }
 
@@ -290,7 +290,7 @@ public class FindInterlocutorUnitTest {
     Mockito.verify(neuralNetworkRepository, Mockito.times(1))
       .findOneRandom();
 
-    Mockito.verify(spiedLobby, Mockito.times(2))
+    Mockito.verify(spiedLobby, Mockito.times(1))
       .size();
 
     Mockito.verify(spiedLobby, Mockito.times(1))
@@ -304,7 +304,9 @@ public class FindInterlocutorUnitTest {
   }
 
   @Test
-  public void shouldNotFindNeuralNetworkAndReturnNullBecauseLobbySizeIsZero() throws IOException {
+  public void shouldNotFindNeuralNetworkAndReturnNullBecauseLobbySizeIsZero() {
+    Human human = new Human(null);
+
     SpiedRandom spiedRandom = Mockito.spy(new SpiedRandom());
     ReflectionTestUtils.setField(lobbyService, "random", spiedRandom);
     Mockito.doReturn(0)
@@ -316,13 +318,23 @@ public class FindInterlocutorUnitTest {
 
     List<Human> spiedLobby = Mockito.spy(new ArrayList<>());
     ReflectionTestUtils.setField(lobbyService, "lobby", spiedLobby);
+    Mockito.doReturn(0)
+      .when(spiedLobby)
+      .size();
+    Mockito.doReturn(true)
+      .when(spiedLobby)
+      .add(ArgumentMatchers.eq(human));
 
-    Human spiedHuman = Mockito.mock(Human.class);
-    Mockito.doNothing()
-      .when(spiedHuman)
-      .send(ArgumentMatchers.eq(new Event(EventType.NO_ONE_TO_TALK)));
+    ScheduledExecutorService spiedExecutorService = Mockito.mock(ScheduledExecutorService.class);
+    ReflectionTestUtils.setField(lobbyService, "executorService", spiedExecutorService);
+    Mockito.doReturn(null)
+      .when(spiedExecutorService)
+      .schedule(
+        ArgumentMatchers.any(Runnable.class),
+        ArgumentMatchers.eq(lobbySpentTime),
+        ArgumentMatchers.eq(TimeUnit.MILLISECONDS));
 
-    Interlocutor interlocutor = lobbyService.findInterlocutor(spiedHuman);
+    Interlocutor interlocutor = lobbyService.findInterlocutor(human);
     assertNull(interlocutor);
 
     Mockito.verify(spiedRandom, Mockito.times(1))
@@ -334,8 +346,14 @@ public class FindInterlocutorUnitTest {
     Mockito.verify(spiedLobby, Mockito.times(1))
       .size();
 
-    Mockito.verify(spiedHuman, Mockito.times(1))
-      .send(ArgumentMatchers.eq(new Event(EventType.NO_ONE_TO_TALK)));
+    Mockito.verify(spiedLobby, Mockito.times(1))
+      .add(ArgumentMatchers.eq(human));
+
+    Mockito.verify(spiedExecutorService, Mockito.times(1))
+      .schedule(
+        ArgumentMatchers.any(Runnable.class),
+        ArgumentMatchers.eq(lobbySpentTime),
+        ArgumentMatchers.eq(TimeUnit.MILLISECONDS));
   }
 
   @Test

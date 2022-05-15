@@ -32,9 +32,9 @@ import site.neurotriumph.chat.www.room.Room;
 @Scope(value = ConfigurableBeanFactory.SCOPE_SINGLETON)
 public class RoomService {
   @Value("${app.chat_messaging_delay}")
-  private long chat_messaging_delay;
-  @Value("${app.required_number_of_messages_to_make_a_choice}")
-  private long required_number_of_messages_to_make_a_choice;
+  private long chatMessagingDelay;
+  @Value("${app.required_number_of_messages_make_a_choice}")
+  private long requiredNumberOfMessagesToMakeChoice;
   private final ScheduledExecutorService executorService;
   private final Random random;
   private final List<Room> rooms;
@@ -67,7 +67,7 @@ public class RoomService {
     }
 
     final Room room = foundRoom.get();
-    final Interlocutor interlocutor = room.getAnother(user);
+    final Interlocutor interlocutor = room.getAnotherInterlocutor(user);
 
     if (interlocutor.isHuman()) {
       interlocutor.send(new DisconnectEvent(DisconnectReason.INTERLOCUTOR_DISCONNECTED));
@@ -87,11 +87,11 @@ public class RoomService {
 
     final Room room = foundRoom.get();
     // You can make a choice only after the N-th number of messages.
-    if (room.getMessageCounter() < required_number_of_messages_to_make_a_choice) {
+    if (room.getMessageCounter() < requiredNumberOfMessagesToMakeChoice) {
       return;
     }
 
-    final Interlocutor interlocutor = room.getAnother(sender);
+    final Interlocutor interlocutor = room.getAnotherInterlocutor(sender);
     // If the interlocutor is a person, we will inform him that he is
     // disconnected from the chat, since his interlocutor has make a
     // choice.
@@ -142,7 +142,7 @@ public class RoomService {
     // then this means that the message was sent too early (and in the Turing
     // test it is important to have a delay between messages so that the machine
     // cannot be recognized by instantaneous answers).
-    if (new Date().getTime() - room.getTimePoint().getTime() < chat_messaging_delay) {
+    if (new Date().getTime() - room.getTimePoint().getTime() < chatMessagingDelay) {
       return;
     }
 
@@ -223,6 +223,6 @@ public class RoomService {
       room.updateTimePoint();
       room.swapInterlocutors();
       room.increaseMessageCounter();
-    }, chat_messaging_delay, TimeUnit.MILLISECONDS));
+    }, chatMessagingDelay, TimeUnit.MILLISECONDS));
   }
 }

@@ -27,8 +27,8 @@ import site.neurotriumph.chat.www.service.RoomService;
 @RunWith(SpringRunner.class)
 @SpringBootTest
 public class MakeChoiceUnitTest {
-  @Value("${app.required_number_of_messages_to_make_a_choice}")
-  public int required_number_of_messages_to_make_a_choice;
+  @Value("${app.required_number_of_messages_make_a_choice}")
+  public int requiredNumberOfMessagesToMakeChoice;
   @Autowired
   private RoomService roomService;
 
@@ -48,12 +48,12 @@ public class MakeChoiceUnitTest {
       .send(ArgumentMatchers.eq(new Event(EventType.IT_WAS_A_MACHINE)));
 
     Room spiedRoom = Mockito.spy(new Room(spiedSender, spiedInterlocutor));
-    Mockito.doReturn(required_number_of_messages_to_make_a_choice)
+    Mockito.doReturn(requiredNumberOfMessagesToMakeChoice)
       .when(spiedRoom)
       .getMessageCounter();
     Mockito.doReturn(spiedInterlocutor)
       .when(spiedRoom)
-      .getAnother(ArgumentMatchers.eq(spiedSender));
+      .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
     List<Room> spiedRooms = Mockito.spy(new ArrayList<>());
     ReflectionTestUtils.setField(roomService, "rooms", spiedRooms);
@@ -72,7 +72,7 @@ public class MakeChoiceUnitTest {
       .getMessageCounter();
 
     Mockito.verify(spiedRoom, Mockito.times(1))
-      .getAnother(ArgumentMatchers.eq(spiedSender));
+      .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
     Mockito.verify(spiedInterlocutor, Mockito.times(2))
       .isHuman();
@@ -109,12 +109,12 @@ public class MakeChoiceUnitTest {
       .send(ArgumentMatchers.eq(new Event(EventType.IT_WAS_A_HUMAN)));
 
     Room spiedRoom = Mockito.spy(new Room(spiedSender, spiedInterlocutor));
-    Mockito.doReturn(required_number_of_messages_to_make_a_choice)
+    Mockito.doReturn(requiredNumberOfMessagesToMakeChoice)
       .when(spiedRoom)
       .getMessageCounter();
     Mockito.doReturn(spiedInterlocutor)
       .when(spiedRoom)
-      .getAnother(ArgumentMatchers.eq(spiedSender));
+      .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
     List<Room> spiedRooms = Mockito.spy(new ArrayList<>());
     ReflectionTestUtils.setField(roomService, "rooms", spiedRooms);
@@ -133,7 +133,7 @@ public class MakeChoiceUnitTest {
       .getMessageCounter();
 
     Mockito.verify(spiedRoom, Mockito.times(1))
-      .getAnother(ArgumentMatchers.eq(spiedSender));
+      .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
     Mockito.verify(spiedInterlocutor, Mockito.times(2))
       .isHuman();
@@ -170,12 +170,12 @@ public class MakeChoiceUnitTest {
       .send(ArgumentMatchers.eq(new Event(EventType.YOU_ARE_RIGHT)));
 
     Room spiedRoom = Mockito.spy(new Room(spiedSender, spiedInterlocutor));
-    Mockito.doReturn(required_number_of_messages_to_make_a_choice)
+    Mockito.doReturn(requiredNumberOfMessagesToMakeChoice)
       .when(spiedRoom)
       .getMessageCounter();
     Mockito.doReturn(spiedInterlocutor)
       .when(spiedRoom)
-      .getAnother(ArgumentMatchers.eq(spiedSender));
+      .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
     List<Room> spiedRooms = Mockito.spy(new ArrayList<>());
     ReflectionTestUtils.setField(roomService, "rooms", spiedRooms);
@@ -194,7 +194,7 @@ public class MakeChoiceUnitTest {
       .getMessageCounter();
 
     Mockito.verify(spiedRoom, Mockito.times(1))
-      .getAnother(ArgumentMatchers.eq(spiedSender));
+      .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
     Mockito.verify(spiedInterlocutor, Mockito.times(2))
       .isHuman();
@@ -231,12 +231,12 @@ public class MakeChoiceUnitTest {
       .send(ArgumentMatchers.eq(new Event(EventType.YOU_ARE_RIGHT)));
 
     Room spiedRoom = Mockito.spy(new Room(spiedSender, spiedInterlocutor));
-    Mockito.doReturn(required_number_of_messages_to_make_a_choice)
+    Mockito.doReturn(requiredNumberOfMessagesToMakeChoice)
       .when(spiedRoom)
       .getMessageCounter();
     Mockito.doReturn(spiedInterlocutor)
       .when(spiedRoom)
-      .getAnother(ArgumentMatchers.eq(spiedSender));
+      .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
     List<Room> spiedRooms = Mockito.spy(new ArrayList<>());
     ReflectionTestUtils.setField(roomService, "rooms", spiedRooms);
@@ -255,7 +255,7 @@ public class MakeChoiceUnitTest {
       .getMessageCounter();
 
     Mockito.verify(spiedRoom, Mockito.times(1))
-      .getAnother(ArgumentMatchers.eq(spiedSender));
+      .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
     Mockito.verify(spiedInterlocutor, Mockito.times(2))
       .isHuman();
@@ -292,12 +292,12 @@ public class MakeChoiceUnitTest {
       .send(ArgumentMatchers.eq(new Event(EventType.YOU_ARE_WRONG)));
 
     Room spiedRoom = Mockito.spy(new Room(spiedSender, spiedInterlocutor));
-    Mockito.doReturn(required_number_of_messages_to_make_a_choice)
+    Mockito.doReturn(requiredNumberOfMessagesToMakeChoice)
       .when(spiedRoom)
       .getMessageCounter();
     Mockito.doReturn(spiedInterlocutor)
       .when(spiedRoom)
-      .getAnother(ArgumentMatchers.eq(spiedSender));
+      .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
     List<Room> spiedRooms = Mockito.spy(new ArrayList<>());
     ReflectionTestUtils.setField(roomService, "rooms", spiedRooms);
@@ -316,7 +316,7 @@ public class MakeChoiceUnitTest {
       .getMessageCounter();
 
     Mockito.verify(spiedRoom, Mockito.times(1))
-      .getAnother(ArgumentMatchers.eq(spiedSender));
+      .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
     Mockito.verify(spiedInterlocutor, Mockito.times(2))
       .isHuman();
@@ -353,12 +353,12 @@ public class MakeChoiceUnitTest {
       .send(ArgumentMatchers.eq(new Event(EventType.YOU_ARE_WRONG)));
 
     Room spiedRoom = Mockito.spy(new Room(spiedSender, spiedInterlocutor));
-    Mockito.doReturn(required_number_of_messages_to_make_a_choice)
+    Mockito.doReturn(requiredNumberOfMessagesToMakeChoice)
       .when(spiedRoom)
       .getMessageCounter();
     Mockito.doReturn(spiedInterlocutor)
       .when(spiedRoom)
-      .getAnother(ArgumentMatchers.eq(spiedSender));
+      .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
     List<Room> spiedRooms = Mockito.spy(new ArrayList<>());
     ReflectionTestUtils.setField(roomService, "rooms", spiedRooms);
@@ -377,7 +377,7 @@ public class MakeChoiceUnitTest {
       .getMessageCounter();
 
     Mockito.verify(spiedRoom, Mockito.times(1))
-      .getAnother(ArgumentMatchers.eq(spiedSender));
+      .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
     Mockito.verify(spiedInterlocutor, Mockito.times(2))
       .isHuman();

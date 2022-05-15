@@ -28,7 +28,7 @@ import site.neurotriumph.chat.www.repository.NeuralNetworkRepository;
 @Scope(value = ConfigurableBeanFactory.SCOPE_SINGLETON)
 public class LobbyService {
   @Value("${app.lobby_spent_time}")
-  private long lobby_spent_time;
+  private long lobbySpentTime;
   @Autowired
   private NeuralNetworkRepository neuralNetworkRepository;
   @Autowired
@@ -46,13 +46,15 @@ public class LobbyService {
   }
 
   public void onUserDisconnect(Interlocutor user) {
-    final boolean removed = lobby.remove(user);
-    if (removed) {
-      scheduledTasks.remove(user).cancel(false);
+    synchronized (lobby) {
+      final boolean removed = lobby.remove(user);
+      if (removed) {
+        scheduledTasks.remove(user).cancel(false);
+      }
     }
   }
 
-  public Interlocutor findInterlocutor(Interlocutor joinedInterlocutor) throws IOException {
+  public Interlocutor findInterlocutor(Interlocutor joinedInterlocutor) {
     // Using the Random::nextInt() function with parameter 2 (which means
     // getting one of two numbers - 0 or 1), we choose with whom the user
     // will communicate, with a machine (neural network) or with a person
@@ -64,15 +66,6 @@ public class LobbyService {
       final Optional<NeuralNetwork> neuralNetwork = neuralNetworkRepository.findOneRandom();
       if (neuralNetwork.isPresent()) {
         return new Machine(neuralNetwork.get());
-      }
-
-      // If there is not a single neural network in the database, and
-      // at the same time the lobby is empty, we must inform the user
-      // about this and abort the work by returning null.
-      if (lobby.size() == 0) {
-        joinedInterlocutor.send(new Event(EventType.NO_ONE_TO_TALK));
-        ((Human) joinedInterlocutor).close();
-        return null;
       }
     }
 
@@ -87,15 +80,18 @@ public class LobbyService {
     // Thread #2: Doing lobby.remove(0) and removing/getting the first element;
     // Thread #1: Doing lobby.remove(0) and getting null (which is not quite
     // right).
-    synchronized (this) {
+    synchronized (lobby) {
       // If there is at least one human in the lobby, then we return it.
       if (lobby.size() != 0) {
         Interlocutor interlocutor = lobby.remove(0);
 
-        // If the user is still in the lobby, then LOBBY_SPENT_TIME
+        // If the user is still in the lobby, then lobbySpentTime
         // has not yet passed, and we need to cancel the scheduled function
         // execution, as well as remove the entry from the HashMap.
-        scheduledTasks.remove(interlocutor).cancel(false);
+        ScheduledFuture<?> scheduledTask = scheduledTasks.remove(interlocutor);
+        if (scheduledTask != null) {
+          scheduledTask.cancel(false);
+        }
 
         return interlocutor;
       }
@@ -113,7 +109,7 @@ public class LobbyService {
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
-    }, lobby_spent_time, TimeUnit.MILLISECONDS));
+    }, lobbySpentTime, TimeUnit.MILLISECONDS));
 
     // By returning null, we oblige the caller to do nothing, but simply
     // complete their work.
@@ -121,26 +117,28 @@ public class LobbyService {
   }
 
   public void afterSpentTimeInLobby(Interlocutor joinedInterlocutor) throws IOException {
-    // Yes, it may happen that the scheduled task is running, but the user as
-    // already been removed from the lobby. Take a look at the explanation
-    // below:
-    //
-    // Thread #1: Doing lobby.remove(0) (in this::findInterlocutor(...) in synchronized block);
-    // Thread #2: Invokes this method;
-    // Thread #1: Doing schedules.remove(foundHuman).cancel(false).
-    //
-    // That is, a scheduled task can be executed after the user is removed
-    // from the list, but even before it is canceled. So we need to make sure
-    // the user is still in the lobby.
-    if (!lobby.contains(joinedInterlocutor)) {
-      return;
+    synchronized (lobby) {
+      // Yes, it may happen that the scheduled task is running, but the user as
+      // already been removed from the lobby. Take a look at the explanation
+      // below:
+      //
+      // Thread #1: Doing lobby.remove(0) (in this::findInterlocutor(...) in synchronized block);
+      // Thread #2: Invokes this method;
+      // Thread #1: Doing schedules.remove(foundHuman).cancel(false).
+      //
+      // That is, a scheduled task can be executed after the user is removed
+      // from the list, but even before it is canceled. So we need to make sure
+      // the user is still in the lobby.
+      if (!lobby.contains(joinedInterlocutor)) {
+        return;
+      }
+
+      // Since we are waiting too long, we remove our session from the list.
+      lobby.remove(joinedInterlocutor);
+
+      // Removing a scheduled task.
+      scheduledTasks.remove(joinedInterlocutor);
     }
-
-    // Since we are waiting too long, we remove our session from the list.
-    lobby.remove(joinedInterlocutor);
-
-    // Removing a scheduled task.
-    scheduledTasks.remove(joinedInterlocutor);
 
     // Since no one invited us, we will have to look for an interlocutor
     // from the list of machines.
