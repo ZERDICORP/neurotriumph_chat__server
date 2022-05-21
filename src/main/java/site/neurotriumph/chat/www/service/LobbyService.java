@@ -58,9 +58,9 @@ public class LobbyService {
   @Transactional
   public Interlocutor findInterlocutor(Interlocutor joinedInterlocutor) {
     // Using the Random::nextInt() function with parameter 2 (which means
-    // getting one of two numbers - 0 or 1), we choose with whom the user
-    // will communicate, with a machine (neural network) or with a person
-    // (another web socket session).
+    // getting one of two numbers - 0 or 1), we choose who the user will
+    // communicate with: a machine (neural network) or a person (another
+    // web socket session).
     final int rand = random.nextInt(2);
 
     // When rand == 0, we take a neural network as an interlocutor.
@@ -77,14 +77,14 @@ public class LobbyService {
       }
     }
 
-    // Else, when rand == 1, we take another websocket session as the
-    // interlocutor.
+    // Else, when rand == 1  (well, or not a single neural network was
+    // found), we take another websocket session as the interlocutor.
 
     // Why is there a synchronous block here? Imagine that the lobby list
     // contains 1 item. Without a synchronous block, the following situation
     // can happen:
     //
-    // Thread #1: Checking if lobby.size() == 0 and getting a positive result;
+    // Thread #1: Checking if lobby.size() != 0 and getting a positive result;
     // Thread #2: Doing lobby.remove(0) and removing/getting the first element;
     // Thread #1: Doing lobby.remove(0) and getting null (which is not quite
     // right).
@@ -159,6 +159,6 @@ public class LobbyService {
       return;
     }
 
-    roomService.create(joinedInterlocutor, new Machine(neuralNetwork.get()));
+    roomService.create(joinedInterlocutor, new Machine(neuralNetwork.get())); // TODO: add onError to Machine
   }
 }
