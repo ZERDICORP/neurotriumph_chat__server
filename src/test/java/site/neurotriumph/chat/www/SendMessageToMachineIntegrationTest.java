@@ -4,8 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.net.URI;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
@@ -26,6 +24,7 @@ import site.neurotriumph.chat.www.pojo.Event;
 import site.neurotriumph.chat.www.pojo.EventType;
 import site.neurotriumph.chat.www.pojo.InterlocutorFoundEvent;
 import site.neurotriumph.chat.www.util.EchoServer;
+import site.neurotriumph.chat.www.util.EventQueue;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
@@ -39,7 +38,7 @@ public class SendMessageToMachineIntegrationTest {
   private ObjectMapper objectMapper;
 
   @Before
-  public void setup() {
+  public void before() {
     baseUrl = "ws://localhost:" + serverPort + "/api/v1/bind";
     echoServer = new EchoServer();
 
@@ -47,7 +46,7 @@ public class SendMessageToMachineIntegrationTest {
   }
 
   @After
-  public void destroy() throws IOException {
+  public void after() throws IOException {
     echoServer.stop();
   }
 
@@ -55,7 +54,7 @@ public class SendMessageToMachineIntegrationTest {
   @Sql(value = {"/sql/insert_neural_network.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
   @Sql(value = {"/sql/truncate_neural_network.sql"}, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
   public void shouldReceiveChatMessage() throws Exception {
-    BlockingQueue<Event> blockingQueue = new ArrayBlockingQueue<>(1);
+    EventQueue eventQueue = new EventQueue(1);
 
     new WebSocketClient(new URI(baseUrl)) {
       @Override
@@ -75,7 +74,7 @@ public class SendMessageToMachineIntegrationTest {
                 send(objectMapper.writeValueAsString(new ChatMessageEvent("Hello, world!")));
               }
             }
-            case CHAT_MESSAGE -> blockingQueue.add(objectMapper.readValue(message,
+            case CHAT_MESSAGE -> eventQueue.add(objectMapper.readValue(message,
               ChatMessageEvent.class));
           }
         } catch (JsonProcessingException e) {
@@ -92,7 +91,9 @@ public class SendMessageToMachineIntegrationTest {
       }
     }.connectBlocking();
 
-    ChatMessageEvent chatMessageEvent = (ChatMessageEvent) blockingQueue.poll(2, TimeUnit.SECONDS);
+    eventQueue.waitUntilFull();
+
+    ChatMessageEvent chatMessageEvent = (ChatMessageEvent) eventQueue.poll();
     assertNotNull(chatMessageEvent);
     assertEquals(EventType.CHAT_MESSAGE, chatMessageEvent.getType());
     assertEquals("Hello, world!", chatMessageEvent.getMessage());

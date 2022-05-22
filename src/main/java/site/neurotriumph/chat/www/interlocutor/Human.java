@@ -16,8 +16,10 @@ public class Human extends Interlocutor {
 
   @Override
   public void send(Event event) throws IOException {
-    if (webSocketSession.isOpen()) {
-      webSocketSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(event)));
+    synchronized (webSocketSession) {
+      if (webSocketSession.isOpen()) {
+        webSocketSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(event)));
+      }
     }
   }
 

@@ -3,17 +3,16 @@ package site.neurotriumph.chat.www;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
+import org.junit.After;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.test.context.TestPropertySource;
@@ -24,12 +23,15 @@ import site.neurotriumph.chat.www.pojo.Event;
 import site.neurotriumph.chat.www.pojo.EventType;
 import site.neurotriumph.chat.www.pojo.InterlocutorFoundEvent;
 import site.neurotriumph.chat.www.service.LobbyService;
+import site.neurotriumph.chat.www.util.EventQueue;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @TestPropertySource("/test.properties")
 public class SendMessageToHumanIntegrationTest {
   private String baseUrl;
+  @Value("${app.lobby_spent_time}")
+  private long originalLobbySpentTime;
   @LocalServerPort
   private int serverPort;
   @Autowired
@@ -44,14 +46,19 @@ public class SendMessageToHumanIntegrationTest {
     ReflectionTestUtils.setField(lobbyService, "lobbySpentTime", 10000);
   }
 
+  @After
+  public void after() {
+    ReflectionTestUtils.setField(lobbyService, "lobbySpentTime", originalLobbySpentTime);
+  }
+
   @Test
   public void shouldReceiveChatMessages() throws Exception {
-    BlockingQueue<Event> blockingQueue = new ArrayBlockingQueue<>(1);
+    EventQueue eventQueue = new EventQueue(2);
 
-    final String messageToSend = "Hello, world!";
+    String messageToSend = "Hello, world!";
 
     // First user.
-    new WebSocketClient(new URI(baseUrl)) {
+    WebSocketClient firstWebSocketClient = new WebSocketClient(new URI(baseUrl)) {
       @Override
       public void onOpen(ServerHandshake serverHandshake) {
       }
@@ -69,7 +76,7 @@ public class SendMessageToHumanIntegrationTest {
                 send(objectMapper.writeValueAsString(new ChatMessageEvent(messageToSend)));
               }
             }
-            case CHAT_MESSAGE -> blockingQueue.add(objectMapper.readValue(message, ChatMessageEvent.class));
+            case CHAT_MESSAGE -> eventQueue.add(objectMapper.readValue(message, ChatMessageEvent.class));
           }
         } catch (JsonProcessingException e) {
           throw new RuntimeException(e);
@@ -83,10 +90,11 @@ public class SendMessageToHumanIntegrationTest {
       @Override
       public void onError(Exception ex) {
       }
-    }.connectBlocking();
+    };
+    firstWebSocketClient.connectBlocking();
 
     // Second user.
-    new WebSocketClient(new URI(baseUrl)) {
+    WebSocketClient secondWebSocketClient = new WebSocketClient(new URI(baseUrl)) {
       @Override
       public void onOpen(ServerHandshake serverHandshake) {
       }
@@ -104,7 +112,7 @@ public class SendMessageToHumanIntegrationTest {
                 send(objectMapper.writeValueAsString(new ChatMessageEvent(messageToSend)));
               }
             }
-            case CHAT_MESSAGE -> blockingQueue.add(objectMapper.readValue(message, ChatMessageEvent.class));
+            case CHAT_MESSAGE -> eventQueue.add(objectMapper.readValue(message, ChatMessageEvent.class));
           }
         } catch (JsonProcessingException e) {
           throw new RuntimeException(e);
@@ -118,16 +126,24 @@ public class SendMessageToHumanIntegrationTest {
       @Override
       public void onError(Exception ex) {
       }
-    }.connectBlocking();
+    };
+    secondWebSocketClient.connectBlocking();
 
-    ChatMessageEvent firstChatMessageEvent = (ChatMessageEvent) blockingQueue.poll(2, TimeUnit.SECONDS);
+    eventQueue.waitUntilFull();
+
+    ChatMessageEvent firstChatMessageEvent = (ChatMessageEvent) eventQueue.poll();
     assertNotNull(firstChatMessageEvent);
     assertEquals(EventType.CHAT_MESSAGE, firstChatMessageEvent.getType());
     assertEquals(messageToSend, firstChatMessageEvent.getMessage());
 
-    ChatMessageEvent secondChatMessageEvent = (ChatMessageEvent) blockingQueue.poll(2, TimeUnit.SECONDS);
+    ChatMessageEvent secondChatMessageEvent = (ChatMessageEvent) eventQueue.poll();
     assertNotNull(secondChatMessageEvent);
     assertEquals(EventType.CHAT_MESSAGE, secondChatMessageEvent.getType());
     assertEquals(messageToSend, secondChatMessageEvent.getMessage());
+
+//    firstWebSocketClient.close();
+//    secondWebSocketClient.close();
+//
+//    Thread.sleep(1000);
   }
 }

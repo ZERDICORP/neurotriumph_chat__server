@@ -11,7 +11,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import javax.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
@@ -55,7 +54,6 @@ public class LobbyService {
     }
   }
 
-  @Transactional
   public Interlocutor findMachine() {
     final Optional<NeuralNetwork> foundNeuralNetwork = neuralNetworkRepository.findOneRandom();
     if (foundNeuralNetwork.isPresent()) {

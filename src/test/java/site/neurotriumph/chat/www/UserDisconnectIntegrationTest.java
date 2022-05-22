@@ -3,17 +3,16 @@ package site.neurotriumph.chat.www;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
+import org.junit.After;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.test.context.TestPropertySource;
@@ -24,12 +23,15 @@ import site.neurotriumph.chat.www.pojo.DisconnectReason;
 import site.neurotriumph.chat.www.pojo.Event;
 import site.neurotriumph.chat.www.pojo.EventType;
 import site.neurotriumph.chat.www.service.LobbyService;
+import site.neurotriumph.chat.www.util.EventQueue;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @TestPropertySource("/test.properties")
 public class UserDisconnectIntegrationTest {
   private String baseUrl;
+  @Value("${app.lobby_spent_time}")
+  private long originalLobbySpentTime;
   @LocalServerPort
   private int serverPort;
   @Autowired
@@ -44,9 +46,14 @@ public class UserDisconnectIntegrationTest {
     ReflectionTestUtils.setField(lobbyService, "lobbySpentTime", 10000);
   }
 
+  @After
+  public void after() {
+    ReflectionTestUtils.setField(lobbyService, "lobbySpentTime", originalLobbySpentTime);
+  }
+
   @Test
   public void shouldReceiveDisconnectEvent() throws Exception {
-    BlockingQueue<Event> blockingQueue = new ArrayBlockingQueue<>(1);
+    EventQueue eventQueue = new EventQueue(1);
 
     // First user (will be disconnected).
     WebSocketClient firstWebSocketClient = new WebSocketClient(new URI(baseUrl)) {
@@ -79,7 +86,7 @@ public class UserDisconnectIntegrationTest {
         try {
           Event event = objectMapper.readValue(message, Event.class);
           if (event.getType() == EventType.DISCONNECT) {
-            blockingQueue.add(objectMapper.readValue(message, DisconnectEvent.class));
+            eventQueue.add(objectMapper.readValue(message, DisconnectEvent.class));
           }
         } catch (JsonProcessingException e) {
           throw new RuntimeException(e);
@@ -98,7 +105,9 @@ public class UserDisconnectIntegrationTest {
     // Disconnect the first user.
     firstWebSocketClient.close();
 
-    DisconnectEvent disconnectEvent = (DisconnectEvent) blockingQueue.poll(2, TimeUnit.SECONDS);
+    eventQueue.waitUntilFull();
+
+    DisconnectEvent disconnectEvent = (DisconnectEvent) eventQueue.poll();
     assertNotNull(disconnectEvent);
     assertEquals(EventType.DISCONNECT, disconnectEvent.getType());
     assertEquals(DisconnectReason.INTERLOCUTOR_DISCONNECTED, disconnectEvent.getReason());
