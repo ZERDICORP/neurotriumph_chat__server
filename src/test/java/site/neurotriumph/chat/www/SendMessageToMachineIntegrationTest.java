@@ -30,7 +30,7 @@ import site.neurotriumph.chat.www.util.EchoServer;
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @TestPropertySource("/test.properties")
-public class SendMessageIntegrationTest {
+public class SendMessageToMachineIntegrationTest {
   private String baseUrl;
   private EchoServer echoServer;
   @LocalServerPort
