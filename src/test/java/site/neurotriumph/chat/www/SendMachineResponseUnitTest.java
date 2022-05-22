@@ -1,7 +1,9 @@
 package site.neurotriumph.chat.www;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.ScheduledFuture;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -13,6 +15,9 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.util.ReflectionTestUtils;
 import site.neurotriumph.chat.www.interlocutor.Human;
 import site.neurotriumph.chat.www.interlocutor.Interlocutor;
+import site.neurotriumph.chat.www.pojo.ChatMessageEvent;
+import site.neurotriumph.chat.www.pojo.DisconnectEvent;
+import site.neurotriumph.chat.www.pojo.DisconnectReason;
 import site.neurotriumph.chat.www.room.Room;
 import site.neurotriumph.chat.www.service.RoomService;
 
@@ -23,8 +28,34 @@ public class SendMachineResponseUnitTest {
   private RoomService roomService;
 
   @Test
-  public void shouldScheduleTaskAndPutItIntoScheduledTasksThanSendMessageAndUpdateRoom() throws IOException,
-    InterruptedException {
+  public void shouldSendEventAndRemoveRoomAndThanTerminateMethodBecauseResponseIsNull() throws IOException {
+    Room room = new Room(null, null);
+
+    List<Room> spiedRooms = Mockito.spy(new ArrayList<>());
+    ReflectionTestUtils.setField(roomService, "rooms", spiedRooms);
+    Mockito.doReturn(true)
+      .when(spiedRooms)
+      .remove(ArgumentMatchers.eq(room));
+
+    Interlocutor spiedUser = Mockito.spy(new Human(null));
+    Mockito.doNothing()
+      .when(spiedUser)
+      .send(ArgumentMatchers.eq(new DisconnectEvent(DisconnectReason.INTERLOCUTOR_DISCONNECTED)));
+
+    roomService.sendMachineResponse(null, spiedUser, room);
+
+    Mockito.verify(spiedUser, Mockito.times(1))
+      .send(ArgumentMatchers.eq(new DisconnectEvent(DisconnectReason.INTERLOCUTOR_DISCONNECTED)));
+
+    Mockito.verify(spiedRooms, Mockito.times(1))
+      .remove(ArgumentMatchers.eq(room));
+  }
+
+  @Test
+  public void shouldScheduleTaskAndPutItIntoScheduledTasksThanSendMessageAndUpdateRoom()
+    throws IOException, InterruptedException {
+    ChatMessageEvent chatMessageEvent = new ChatMessageEvent();
+
     ReflectionTestUtils.setField(roomService, "chatMessagingDelay", 0);
 
     Room spiedRoom = Mockito.spy(new Room(null, null));
@@ -32,12 +63,12 @@ public class SendMachineResponseUnitTest {
     Interlocutor spiedUser = Mockito.spy(new Human(null));
     Mockito.doNothing()
       .when(spiedUser)
-      .send(ArgumentMatchers.eq(null));
+      .send(ArgumentMatchers.eq(chatMessageEvent));
 
     HashMap<Interlocutor, ScheduledFuture<?>> spiedScheduledTasks = Mockito.spy(new HashMap<>());
     ReflectionTestUtils.setField(roomService, "scheduledTasks", spiedScheduledTasks);
 
-    roomService.sendMachineResponse(null, spiedUser, spiedRoom);
+    roomService.sendMachineResponse(chatMessageEvent, spiedUser, spiedRoom);
 
     Thread.sleep(1000);
 
@@ -47,7 +78,7 @@ public class SendMachineResponseUnitTest {
         ArgumentMatchers.any(ScheduledFuture.class));
 
     Mockito.verify(spiedUser, Mockito.times(1))
-      .send(ArgumentMatchers.eq(null));
+      .send(ArgumentMatchers.eq(chatMessageEvent));
 
     Mockito.verify(spiedRoom, Mockito.times(1))
       .updateTimePoint();
@@ -60,15 +91,17 @@ public class SendMachineResponseUnitTest {
   }
 
   @Test
-  public void shouldScheduleTaskAndPutItIntoScheduledTasks() {
+  public void shouldScheduleTaskAndPutItIntoScheduledTasks() throws IOException {
     HashMap<Interlocutor, ScheduledFuture<?>> spiedScheduledTasks = Mockito.spy(new HashMap<>());
     ReflectionTestUtils.setField(roomService, "scheduledTasks", spiedScheduledTasks);
 
-    roomService.sendMachineResponse(null, null, null);
+    Interlocutor user = new Human(null);
+
+    roomService.sendMachineResponse(new ChatMessageEvent(), user, null);
 
     Mockito.verify(spiedScheduledTasks, Mockito.times(1))
       .put(
-        ArgumentMatchers.eq(null),
+        ArgumentMatchers.eq(user),
         ArgumentMatchers.any(ScheduledFuture.class));
   }
 }

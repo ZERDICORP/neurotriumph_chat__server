@@ -208,8 +208,15 @@ public class RoomService {
     sendMachineResponse(((Machine) secondInterlocutor).getResponse(), firstInterlocutor, room);
   }
 
-  public void sendMachineResponse(ChatMessageEvent response, Interlocutor user, Room room) {
-    // TODO: handle null response
+  public void sendMachineResponse(ChatMessageEvent response, Interlocutor user, Room room) throws IOException {
+    // If the response of the neural network is null, then an error occurred
+    // while sending, which means that the api is invalid, in which case we
+    // can consider this as a disconnect.
+    if (response == null) {
+      user.send(new DisconnectEvent(DisconnectReason.INTERLOCUTOR_DISCONNECTED));
+      rooms.remove(room);
+      return;
+    }
 
     // We schedule to send the machine's response to the user (simulated delay).
     scheduledTasks.put(user, executorService.schedule(() -> {

@@ -28,7 +28,7 @@ import site.neurotriumph.chat.www.service.LobbyService;
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @TestPropertySource("/test.properties")
-public class DisconnectIntegrationTest {
+public class UserDisconnectIntegrationTest {
   private String baseUrl;
   @LocalServerPort
   private int serverPort;
