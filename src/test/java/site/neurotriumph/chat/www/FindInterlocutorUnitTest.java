@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -17,19 +16,17 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.util.ReflectionTestUtils;
-import site.neurotriumph.chat.www.entity.NeuralNetwork;
 import site.neurotriumph.chat.www.interlocutor.Human;
 import site.neurotriumph.chat.www.interlocutor.Interlocutor;
 import site.neurotriumph.chat.www.interlocutor.Machine;
 import site.neurotriumph.chat.www.pojo.Event;
 import site.neurotriumph.chat.www.pojo.EventType;
-import site.neurotriumph.chat.www.repository.NeuralNetworkRepository;
 import site.neurotriumph.chat.www.service.LobbyService;
 import site.neurotriumph.chat.www.service.RoomService;
 import site.neurotriumph.chat.www.util.SpiedRandom;
@@ -40,12 +37,10 @@ import site.neurotriumph.chat.www.util.SpiedScheduledFuture;
 public class FindInterlocutorUnitTest {
   @Value("${app.lobby_spent_time}")
   private long lobbySpentTime;
-  @Autowired
+  @SpyBean
   private LobbyService lobbyService;
   @MockBean
   private RoomService roomService;
-  @MockBean
-  private NeuralNetworkRepository neuralNetworkRepository;
 
   @Test
   public void afterSpentTimeInLobby_shouldCreateRoom() throws IOException {
@@ -69,8 +64,9 @@ public class FindInterlocutorUnitTest {
       .when(spiedScheduledTasks)
       .remove(ArgumentMatchers.eq(spiedHuman));
 
-    Mockito.when(neuralNetworkRepository.findOneRandom())
-      .thenReturn(Optional.of(new NeuralNetwork()));
+    Mockito.doReturn(new Machine(null))
+      .when(lobbyService)
+      .findMachine();
 
     lobbyService.afterSpentTimeInLobby(spiedHuman);
 
@@ -83,8 +79,8 @@ public class FindInterlocutorUnitTest {
     Mockito.verify(spiedScheduledTasks, Mockito.times(1))
       .remove(ArgumentMatchers.eq(spiedHuman));
 
-    Mockito.verify(neuralNetworkRepository, Mockito.times(1))
-      .findOneRandom();
+    Mockito.verify(lobbyService, Mockito.times(1))
+      .findMachine();
 
     Mockito.verify(roomService, Mockito.times(1))
       .create(
@@ -114,8 +110,9 @@ public class FindInterlocutorUnitTest {
       .when(spiedScheduledTasks)
       .remove(ArgumentMatchers.eq(spiedHuman));
 
-    Mockito.when(neuralNetworkRepository.findOneRandom())
-      .thenReturn(Optional.empty());
+    Mockito.doReturn(null)
+      .when(lobbyService)
+      .findMachine();
 
     lobbyService.afterSpentTimeInLobby(spiedHuman);
 
@@ -128,8 +125,8 @@ public class FindInterlocutorUnitTest {
     Mockito.verify(spiedScheduledTasks, Mockito.times(1))
       .remove(ArgumentMatchers.eq(spiedHuman));
 
-    Mockito.verify(neuralNetworkRepository, Mockito.times(1))
-      .findOneRandom();
+    Mockito.verify(lobbyService, Mockito.times(1))
+      .findMachine();
 
     Mockito.verify(spiedHuman, Mockito.times(1))
       .send(ArgumentMatchers.eq(new Event(EventType.NO_ONE_TO_TALK)));
@@ -204,7 +201,7 @@ public class FindInterlocutorUnitTest {
   }
 
   @Test
-  public void shouldReturnHumanBecauseLobbySizeIsNotZero() throws IOException {
+  public void shouldReturnHumanBecauseLobbySizeIsNotZero() {
     Human foundHuman = new Human(null);
 
     SpiedRandom spiedRandom = Mockito.spy(new SpiedRandom());
@@ -251,7 +248,7 @@ public class FindInterlocutorUnitTest {
   }
 
   @Test
-  public void shouldNotFindNeuralNetworkAndReturnHumanBecauseLobbySizeIsNotZero() throws IOException {
+  public void shouldNotFindNeuralNetworkAndReturnHumanBecauseLobbySizeIsNotZero() {
     Human foundHuman = new Human(null);
 
     SpiedRandom spiedRandom = Mockito.spy(new SpiedRandom());
@@ -260,8 +257,9 @@ public class FindInterlocutorUnitTest {
       .when(spiedRandom)
       .nextInt(ArgumentMatchers.eq(2));
 
-    Mockito.when(neuralNetworkRepository.findOneRandom())
-      .thenReturn(Optional.empty());
+    Mockito.doReturn(null)
+      .when(lobbyService)
+      .findMachine();
 
     List<Human> spiedLobby = Mockito.spy(new ArrayList<>());
     ReflectionTestUtils.setField(lobbyService, "lobby", spiedLobby);
@@ -287,8 +285,8 @@ public class FindInterlocutorUnitTest {
     Mockito.verify(spiedRandom, Mockito.times(1))
       .nextInt(ArgumentMatchers.eq(2));
 
-    Mockito.verify(neuralNetworkRepository, Mockito.times(1))
-      .findOneRandom();
+    Mockito.verify(lobbyService, Mockito.times(1))
+      .findMachine();
 
     Mockito.verify(spiedLobby, Mockito.times(1))
       .size();
@@ -313,8 +311,9 @@ public class FindInterlocutorUnitTest {
       .when(spiedRandom)
       .nextInt(ArgumentMatchers.eq(2));
 
-    Mockito.when(neuralNetworkRepository.findOneRandom())
-      .thenReturn(Optional.empty());
+    Mockito.doReturn(null)
+      .when(lobbyService)
+      .findMachine();
 
     List<Human> spiedLobby = Mockito.spy(new ArrayList<>());
     ReflectionTestUtils.setField(lobbyService, "lobby", spiedLobby);
@@ -340,8 +339,8 @@ public class FindInterlocutorUnitTest {
     Mockito.verify(spiedRandom, Mockito.times(1))
       .nextInt(ArgumentMatchers.eq(2));
 
-    Mockito.verify(neuralNetworkRepository, Mockito.times(1))
-      .findOneRandom();
+    Mockito.verify(lobbyService, Mockito.times(1))
+      .findMachine();
 
     Mockito.verify(spiedLobby, Mockito.times(1))
       .size();
@@ -357,15 +356,16 @@ public class FindInterlocutorUnitTest {
   }
 
   @Test
-  public void shouldFindNeuralNetworkAndReturnIt() throws IOException {
+  public void shouldFindNeuralNetworkAndReturnIt() {
     SpiedRandom spiedRandom = Mockito.spy(new SpiedRandom());
     ReflectionTestUtils.setField(lobbyService, "random", spiedRandom);
     Mockito.doReturn(0)
       .when(spiedRandom)
       .nextInt(ArgumentMatchers.eq(2));
 
-    Mockito.when(neuralNetworkRepository.findOneRandom())
-      .thenReturn(Optional.of(new NeuralNetwork()));
+    Mockito.doReturn(new Machine(null))
+      .when(lobbyService)
+      .findMachine();
 
     Interlocutor interlocutor = lobbyService.findInterlocutor(new Human(null));
     assertNotNull(interlocutor);
@@ -374,7 +374,7 @@ public class FindInterlocutorUnitTest {
     Mockito.verify(spiedRandom, Mockito.times(1))
       .nextInt(ArgumentMatchers.eq(2));
 
-    Mockito.verify(neuralNetworkRepository, Mockito.times(1))
-      .findOneRandom();
+    Mockito.verify(lobbyService, Mockito.times(1))
+      .findMachine();
   }
 }

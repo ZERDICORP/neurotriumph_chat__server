@@ -56,6 +56,24 @@ public class LobbyService {
   }
 
   @Transactional
+  public Interlocutor findMachine() {
+    final Optional<NeuralNetwork> foundNeuralNetwork = neuralNetworkRepository.findOneRandom();
+    if (foundNeuralNetwork.isPresent()) {
+      final NeuralNetwork neuralNetwork = foundNeuralNetwork.get();
+      return new Machine(neuralNetwork)
+        // If an error occurred while sending a message to the api of the
+        // neural network, we must mark the neural network as invalid and
+        // make it inactive so that it no longer participates in testing.
+        .onError(() -> {
+          neuralNetwork.setInvalid_api(true);
+          neuralNetwork.setActive(false);
+          neuralNetworkRepository.save(neuralNetwork);
+        });
+    }
+
+    return null;
+  }
+
   public Interlocutor findInterlocutor(Interlocutor joinedInterlocutor) {
     // Using the Random::nextInt() function with parameter 2 (which means
     // getting one of two numbers - 0 or 1), we choose who the user will
@@ -65,15 +83,9 @@ public class LobbyService {
 
     // When rand == 0, we take a neural network as an interlocutor.
     if (rand == 0) {
-      final Optional<NeuralNetwork> foundNeuralNetwork = neuralNetworkRepository.findOneRandom();
-      if (foundNeuralNetwork.isPresent()) {
-        final NeuralNetwork neuralNetwork = foundNeuralNetwork.get();
-        return new Machine(neuralNetwork)
-          .onError(() -> {
-            // TODO: neuralNetwork.setInvalidApi(true);
-            neuralNetwork.setActive(false);
-            neuralNetworkRepository.save(neuralNetwork);
-          });
+      final Interlocutor interlocutor = findMachine();
+      if (interlocutor != null) {
+        return interlocutor;
       }
     }
 
@@ -91,12 +103,12 @@ public class LobbyService {
     synchronized (lobby) {
       // If there is at least one human in the lobby, then we return it.
       if (lobby.size() != 0) {
-        Interlocutor interlocutor = lobby.remove(0);
+        final Interlocutor interlocutor = lobby.remove(0);
 
         // If the user is still in the lobby, then lobbySpentTime
         // has not yet passed, and we need to cancel the scheduled function
         // execution, as well as remove the entry from the HashMap.
-        ScheduledFuture<?> scheduledTask = scheduledTasks.remove(interlocutor);
+        final ScheduledFuture<?> scheduledTask = scheduledTasks.remove(interlocutor);
         if (scheduledTask != null) {
           scheduledTask.cancel(false);
         }
@@ -150,15 +162,13 @@ public class LobbyService {
 
     // Since no one invited us, we will have to look for an interlocutor
     // from the list of machines.
-    final Optional<NeuralNetwork> neuralNetwork = neuralNetworkRepository.findOneRandom();
-    // If there are no neural networks, then we need to inform the user
-    // that there really is no one to talk to yet.
-    if (neuralNetwork.isEmpty()) {
+    final Interlocutor interlocutor = findMachine();
+    if (interlocutor == null) {
       joinedInterlocutor.send(new Event(EventType.NO_ONE_TO_TALK));
       ((Human) joinedInterlocutor).close();
       return;
     }
 
-    roomService.create(joinedInterlocutor, new Machine(neuralNetwork.get())); // TODO: add onError to Machine
+    roomService.create(joinedInterlocutor, interlocutor);
   }
 }
