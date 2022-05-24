@@ -15,6 +15,7 @@ import site.neurotriumph.chat.www.pojo.Event;
 public class Machine extends Interlocutor {
   private final RestTemplate restTemplate;
   private final HttpHeaders headers;
+  @Getter
   private final NeuralNetwork neuralNetwork;
   private Runnable onError;
   @Getter
@@ -22,7 +23,6 @@ public class Machine extends Interlocutor {
 
   {
     restTemplate = new RestTemplate();
-
     headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
     headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
@@ -44,6 +44,7 @@ public class Machine extends Interlocutor {
       HttpEntity<Event> entity = new HttpEntity<>(event, headers);
       response = restTemplate.postForObject(neuralNetwork.getApi_root(), entity, ChatMessageEvent.class);
     } catch (RestClientException e) {
+      System.out.println("Failed to send request to NN api: " + e);
       response = null;
       onError.run();
     }

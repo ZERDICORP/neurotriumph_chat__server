@@ -45,4 +45,14 @@ public class NeuralNetwork {
 
   @Column(columnDefinition = "INT(11) DEFAULT 0", nullable = false)
   private int tests_failed;
+
+  public NeuralNetwork incrementTests_passed() {
+    tests_passed++;
+    return this;
+  }
+
+  public NeuralNetwork incrementTests_failed() {
+    tests_failed++;
+    return this;
+  }
 }

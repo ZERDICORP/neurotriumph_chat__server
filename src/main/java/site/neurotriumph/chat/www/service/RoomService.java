@@ -12,10 +12,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Service;
+import site.neurotriumph.chat.www.entity.NeuralNetwork;
 import site.neurotriumph.chat.www.interlocutor.Interlocutor;
 import site.neurotriumph.chat.www.interlocutor.Machine;
 import site.neurotriumph.chat.www.pojo.ChatMessageEvent;
@@ -26,6 +28,7 @@ import site.neurotriumph.chat.www.pojo.Event;
 import site.neurotriumph.chat.www.pojo.EventType;
 import site.neurotriumph.chat.www.pojo.InterlocutorFoundEvent;
 import site.neurotriumph.chat.www.pojo.MakeChoiceEvent;
+import site.neurotriumph.chat.www.repository.NeuralNetworkRepository;
 import site.neurotriumph.chat.www.room.Room;
 
 @Service
@@ -35,6 +38,8 @@ public class RoomService {
   private long chatMessagingDelay;
   @Value("${app.required_number_of_messages_to_make_a_choice}")
   private long requiredNumberOfMessagesToMakeChoice;
+  @Autowired
+  private NeuralNetworkRepository neuralNetworkRepository;
   private final ScheduledExecutorService executorService;
   private final Random random;
   private final List<Room> rooms;
@@ -104,20 +109,37 @@ public class RoomService {
     // should be removed and canceled.
     removeAndCancelScheduledTask(sender);
 
+    NeuralNetwork neuralNetwork = null;
+    if (!interlocutor.isHuman()) {
+      neuralNetwork = ((Machine) interlocutor).getNeuralNetwork();
+    }
+
     // The user finds it difficult to choose.
     if (makeChoiceEvent.getChoice() == Choice.IDK) {
-      sender.send(new Event(interlocutor.isHuman() ?
-        EventType.IT_WAS_A_HUMAN : EventType.IT_WAS_A_MACHINE));
+      if (neuralNetwork == null) {
+        sender.send(new Event(EventType.IT_WAS_A_HUMAN));
+        return;
+      }
+
+      sender.send(new Event(EventType.IT_WAS_A_MACHINE));
+      neuralNetworkRepository.save(neuralNetwork.incrementTests_passed());
+
       return;
     }
 
     if ((makeChoiceEvent.getChoice() == Choice.ITS_A_HUMAN && interlocutor.isHuman()) ||
       (makeChoiceEvent.getChoice() == Choice.ITS_A_MACHINE && !interlocutor.isHuman())) {
       sender.send(new Event(EventType.YOU_ARE_RIGHT));
+      if (neuralNetwork != null) {
+        neuralNetworkRepository.save(neuralNetwork.incrementTests_failed());
+      }
       return;
     }
 
     sender.send(new Event(EventType.YOU_ARE_WRONG));
+    if (neuralNetwork != null) {
+      neuralNetworkRepository.save(neuralNetwork.incrementTests_passed());
+    }
   }
 
   public void sendMessage(Interlocutor sender, ChatMessageEvent chatMessageEvent) throws IOException {
@@ -171,12 +193,16 @@ public class RoomService {
   }
 
   public void create(Interlocutor firstInterlocutor, Interlocutor secondInterlocutor) throws IOException {
+    System.out.println("CREATE ROOM: BEGIN"); // TODO: delete debug log
+
     rooms.add(new Room(firstInterlocutor, secondInterlocutor));
     final Room room = rooms.get(rooms.size() - 1);
 
     // If rand == 0, then firstInterlocutor starts writing first, otherwise
     // (rand == 1) - starts writing secondInterlocutor.
     final int rand = random.nextInt(2);
+
+    System.out.println("SPEAKS FIRST: " + rand); // TODO: delete debug log
 
     // If the second interlocutor writes first, we need to swap interlocutors
     // in places.
@@ -206,6 +232,8 @@ public class RoomService {
 
     // Forwarding machine response to the user.
     sendMachineResponse(((Machine) secondInterlocutor).getResponse(), firstInterlocutor, room);
+
+    System.out.println("CREATE ROOM: END"); // TODO: delete debug log
   }
 
   public void sendMachineResponse(ChatMessageEvent response, Interlocutor user, Room room) throws IOException {
