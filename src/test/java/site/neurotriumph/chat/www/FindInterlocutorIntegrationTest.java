@@ -1,10 +1,6 @@
 package site.neurotriumph.chat.www;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.net.URI;
-import org.java_websocket.client.WebSocketClient;
-import org.java_websocket.handshake.ServerHandshake;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import org.junit.Before;
@@ -20,6 +16,7 @@ import site.neurotriumph.chat.www.pojo.Event;
 import site.neurotriumph.chat.www.pojo.EventType;
 import site.neurotriumph.chat.www.pojo.InterlocutorFoundEvent;
 import site.neurotriumph.chat.www.util.EventQueue;
+import site.neurotriumph.chat.www.util.WebSocketClient;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
@@ -38,35 +35,14 @@ public class FindInterlocutorIntegrationTest {
 
   @Test
   public void shouldReturnNoOneToTalkMessage() throws Exception {
-    EventQueue eventQueue = new EventQueue(1);
+    final EventQueue eventQueue = new WebSocketClient(baseUrl, objectMapper, 1)
+      .setOnMessage((message, eventType, client) -> client.addEvent(
+        objectMapper.readValue(message, Event.class)))
+      .connectWithBlocking()
+      .waitUntilEventQueueIsFull()
+      .closeAndReturnEventQueue();
 
-    new WebSocketClient(new URI(baseUrl)) {
-      @Override
-      public void onOpen(ServerHandshake serverHandshake) {
-      }
-
-      @Override
-      public void onMessage(String message) {
-        System.out.println(message);
-        try {
-          eventQueue.add(objectMapper.readValue(message, Event.class));
-        } catch (JsonProcessingException e) {
-          throw new RuntimeException(e);
-        }
-      }
-
-      @Override
-      public void onClose(int code, String reason, boolean remote) {
-      }
-
-      @Override
-      public void onError(Exception ex) {
-      }
-    }.connectBlocking();
-
-    eventQueue.waitUntilFull();
-
-    Event event = eventQueue.poll();
+    final Event event = eventQueue.poll();
     assertNotNull(event);
     assertEquals(EventType.NO_ONE_TO_TALK, event.getType());
   }
@@ -75,34 +51,14 @@ public class FindInterlocutorIntegrationTest {
   @Sql(value = {"/sql/insert_neural_network.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
   @Sql(value = {"/sql/truncate_neural_network.sql"}, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
   public void shouldReturnInterlocutorFoundMessage() throws Exception {
-    EventQueue eventQueue = new EventQueue(1);
+    final EventQueue eventQueue = new WebSocketClient(baseUrl, objectMapper, 1)
+      .setOnMessage((message, eventType, client) -> client.addEvent(
+        objectMapper.readValue(message, InterlocutorFoundEvent.class)))
+      .connectWithBlocking()
+      .waitUntilEventQueueIsFull()
+      .closeAndReturnEventQueue();
 
-    new WebSocketClient(new URI(baseUrl)) {
-      @Override
-      public void onOpen(ServerHandshake serverHandshake) {
-      }
-
-      @Override
-      public void onMessage(String message) {
-        try {
-          eventQueue.add(objectMapper.readValue(message, InterlocutorFoundEvent.class));
-        } catch (JsonProcessingException e) {
-          throw new RuntimeException(e);
-        }
-      }
-
-      @Override
-      public void onClose(int code, String reason, boolean remote) {
-      }
-
-      @Override
-      public void onError(Exception ex) {
-      }
-    }.connectBlocking();
-
-    eventQueue.waitUntilFull();
-
-    InterlocutorFoundEvent interlocutorFoundEvent = (InterlocutorFoundEvent) eventQueue.poll();
+    final InterlocutorFoundEvent interlocutorFoundEvent = (InterlocutorFoundEvent) eventQueue.poll();
     assertNotNull(interlocutorFoundEvent);
     assertNotNull(interlocutorFoundEvent.getTimeLabel());
     assertEquals(EventType.INTERLOCUTOR_FOUND, interlocutorFoundEvent.getType());

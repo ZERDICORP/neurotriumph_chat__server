@@ -1,10 +1,6 @@
 package site.neurotriumph.chat.www;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.net.URI;
-import org.java_websocket.client.WebSocketClient;
-import org.java_websocket.handshake.ServerHandshake;
 import org.junit.After;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -19,11 +15,11 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.util.ReflectionTestUtils;
 import site.neurotriumph.chat.www.pojo.ChatMessageEvent;
-import site.neurotriumph.chat.www.pojo.Event;
 import site.neurotriumph.chat.www.pojo.EventType;
 import site.neurotriumph.chat.www.pojo.InterlocutorFoundEvent;
 import site.neurotriumph.chat.www.service.LobbyService;
 import site.neurotriumph.chat.www.util.EventQueue;
+import site.neurotriumph.chat.www.util.WebSocketClient;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
@@ -31,7 +27,7 @@ import site.neurotriumph.chat.www.util.EventQueue;
 public class SendMessageToHumanIntegrationTest {
   private String baseUrl;
   @Value("${app.lobby_spent_time}")
-  private long originalLobbySpentTime;
+  private long lobbySpentTime;
   @LocalServerPort
   private int serverPort;
   @Autowired
@@ -48,102 +44,61 @@ public class SendMessageToHumanIntegrationTest {
 
   @After
   public void after() {
-    ReflectionTestUtils.setField(lobbyService, "lobbySpentTime", originalLobbySpentTime);
+    ReflectionTestUtils.setField(lobbyService, "lobbySpentTime", lobbySpentTime);
   }
 
   @Test
   public void shouldReceiveChatMessages() throws Exception {
-    EventQueue eventQueue = new EventQueue(2);
-
-    String messageToSend = "Hello, world!";
+    final String messageToSend = "Hello, world!";
 
     // First user.
-    WebSocketClient firstWebSocketClient = new WebSocketClient(new URI(baseUrl)) {
-      @Override
-      public void onOpen(ServerHandshake serverHandshake) {
-      }
+    final WebSocketClient firstWebSocketClient = new WebSocketClient(baseUrl, objectMapper, 1)
+      .setOnMessage((message, eventType, client) -> {
+        switch (eventType) {
+          case INTERLOCUTOR_FOUND -> {
+            InterlocutorFoundEvent interlocutorFoundEvent = objectMapper.readValue(message,
+              InterlocutorFoundEvent.class);
 
-      @Override
-      public void onMessage(String message) {
-        try {
-          Event event = objectMapper.readValue(message, Event.class);
-          switch (event.getType()) {
-            case INTERLOCUTOR_FOUND -> {
-              InterlocutorFoundEvent interlocutorFoundEvent = objectMapper.readValue(message,
-                InterlocutorFoundEvent.class);
-
-              if (interlocutorFoundEvent.isAbleToWrite()) {
-                send(objectMapper.writeValueAsString(new ChatMessageEvent(messageToSend)));
-              }
+            if (interlocutorFoundEvent.isAbleToWrite()) {
+              client.send(objectMapper.writeValueAsString(new ChatMessageEvent(messageToSend)));
             }
-            case CHAT_MESSAGE -> eventQueue.add(objectMapper.readValue(message, ChatMessageEvent.class));
           }
-        } catch (JsonProcessingException e) {
-          throw new RuntimeException(e);
+          case CHAT_MESSAGE -> client.addEvent(objectMapper.readValue(message, ChatMessageEvent.class));
         }
-      }
-
-      @Override
-      public void onClose(int code, String reason, boolean remote) {
-      }
-
-      @Override
-      public void onError(Exception ex) {
-      }
-    };
-    firstWebSocketClient.connectBlocking();
+      })
+      .connectWithBlocking();
 
     // Second user.
-    WebSocketClient secondWebSocketClient = new WebSocketClient(new URI(baseUrl)) {
-      @Override
-      public void onOpen(ServerHandshake serverHandshake) {
-      }
+    final WebSocketClient secondWebSocketClient = new WebSocketClient(baseUrl, objectMapper, 1)
+      .setOnMessage((message, eventType, client) -> {
+        switch (eventType) {
+          case INTERLOCUTOR_FOUND -> {
+            InterlocutorFoundEvent interlocutorFoundEvent = objectMapper.readValue(message,
+              InterlocutorFoundEvent.class);
 
-      @Override
-      public void onMessage(String message) {
-        try {
-          Event event = objectMapper.readValue(message, Event.class);
-          switch (event.getType()) {
-            case INTERLOCUTOR_FOUND -> {
-              InterlocutorFoundEvent interlocutorFoundEvent = objectMapper.readValue(message,
-                InterlocutorFoundEvent.class);
-
-              if (interlocutorFoundEvent.isAbleToWrite()) {
-                send(objectMapper.writeValueAsString(new ChatMessageEvent(messageToSend)));
-              }
+            if (interlocutorFoundEvent.isAbleToWrite()) {
+              client.send(objectMapper.writeValueAsString(new ChatMessageEvent(messageToSend)));
             }
-            case CHAT_MESSAGE -> eventQueue.add(objectMapper.readValue(message, ChatMessageEvent.class));
           }
-        } catch (JsonProcessingException e) {
-          throw new RuntimeException(e);
+          case CHAT_MESSAGE -> client.addEvent(objectMapper.readValue(message, ChatMessageEvent.class));
         }
-      }
+      })
+      .connectWithBlocking();
 
-      @Override
-      public void onClose(int code, String reason, boolean remote) {
-      }
+    firstWebSocketClient.waitUntilEventQueueIsFull();
+    secondWebSocketClient.waitUntilEventQueueIsFull();
 
-      @Override
-      public void onError(Exception ex) {
-      }
-    };
-    secondWebSocketClient.connectBlocking();
+    final EventQueue firstEventQueue = firstWebSocketClient.closeAndReturnEventQueue();
+    final EventQueue secondEventQueue = secondWebSocketClient.closeAndReturnEventQueue();
 
-    eventQueue.waitUntilFull();
-
-    ChatMessageEvent firstChatMessageEvent = (ChatMessageEvent) eventQueue.poll();
+    final ChatMessageEvent firstChatMessageEvent = (ChatMessageEvent) firstEventQueue.poll();
     assertNotNull(firstChatMessageEvent);
     assertEquals(EventType.CHAT_MESSAGE, firstChatMessageEvent.getType());
     assertEquals(messageToSend, firstChatMessageEvent.getMessage());
 
-    ChatMessageEvent secondChatMessageEvent = (ChatMessageEvent) eventQueue.poll();
+    final ChatMessageEvent secondChatMessageEvent = (ChatMessageEvent) secondEventQueue.poll();
     assertNotNull(secondChatMessageEvent);
     assertEquals(EventType.CHAT_MESSAGE, secondChatMessageEvent.getType());
     assertEquals(messageToSend, secondChatMessageEvent.getMessage());
-
-//    firstWebSocketClient.close();
-//    secondWebSocketClient.close();
-//
-//    Thread.sleep(1000);
   }
 }

@@ -1,10 +1,6 @@
 package site.neurotriumph.chat.www;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.net.URI;
-import org.java_websocket.client.WebSocketClient;
-import org.java_websocket.handshake.ServerHandshake;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import org.junit.Before;
@@ -23,6 +19,7 @@ import site.neurotriumph.chat.www.pojo.Event;
 import site.neurotriumph.chat.www.pojo.EventType;
 import site.neurotriumph.chat.www.pojo.InterlocutorFoundEvent;
 import site.neurotriumph.chat.www.util.EventQueue;
+import site.neurotriumph.chat.www.util.WebSocketClient;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
@@ -43,89 +40,39 @@ public class MachineDisconnectIntegrationTest {
   @Sql(value = {"/sql/insert_neural_network.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
   @Sql(value = {"/sql/truncate_neural_network.sql"}, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
   public void shouldReceiveDisconnectEventAndAtTheNextConnectionReceiveNoOneToTalkEvent() throws Exception {
-    EventQueue eventQueue = new EventQueue(1);
+    final EventQueue firstEventQueue = new WebSocketClient(baseUrl, objectMapper, 1)
+      .setOnMessage((message, eventType, client) -> {
+        switch (eventType) {
+          case INTERLOCUTOR_FOUND -> {
+            InterlocutorFoundEvent interlocutorFoundEvent = objectMapper.readValue(message,
+              InterlocutorFoundEvent.class);
 
-    new WebSocketClient(new URI(baseUrl)) {
-      @Override
-      public void onOpen(ServerHandshake serverHandshake) {
-      }
-
-      @Override
-      public void onMessage(String message) {
-        try {
-          Event event = objectMapper.readValue(message, Event.class);
-          switch (event.getType()) {
-            case INTERLOCUTOR_FOUND -> {
-              InterlocutorFoundEvent interlocutorFoundEvent = objectMapper.readValue(message,
-                InterlocutorFoundEvent.class);
-
-              if (interlocutorFoundEvent.isAbleToWrite()) {
-                send(objectMapper.writeValueAsString(new ChatMessageEvent("Hello, world!")));
-              }
+            if (interlocutorFoundEvent.isAbleToWrite()) {
+              client.send(objectMapper.writeValueAsString(new ChatMessageEvent("Hello, world!")));
             }
-            case DISCONNECT -> eventQueue.add(objectMapper.readValue(message, DisconnectEvent.class));
           }
-        } catch (JsonProcessingException e) {
-          throw new RuntimeException(e);
+          case DISCONNECT -> client.addEvent(objectMapper.readValue(message, DisconnectEvent.class));
         }
-      }
+      })
+      .connectWithBlocking()
+      .waitUntilEventQueueIsFull()
+      .closeAndReturnEventQueue();
 
-      @Override
-      public void onClose(int code, String reason, boolean remote) {
-      }
-
-      @Override
-      public void onError(Exception ex) {
-      }
-    }.connectBlocking();
-
-    eventQueue.waitUntilFull();
-
-    DisconnectEvent disconnectEvent = (DisconnectEvent) eventQueue.poll();
+    final DisconnectEvent disconnectEvent = (DisconnectEvent) firstEventQueue.poll();
     assertNotNull(disconnectEvent);
     assertEquals(EventType.DISCONNECT, disconnectEvent.getType());
     assertEquals(DisconnectReason.INTERLOCUTOR_DISCONNECTED, disconnectEvent.getReason());
 
     // The next connection should receive a NO_ONE_TO_TALK event because
     // the neural network has become inactive since the previous connection.
-    new WebSocketClient(new URI(baseUrl)) {
-      @Override
-      public void onOpen(ServerHandshake serverHandshake) {
-      }
+    final EventQueue secondEventQueue = new WebSocketClient(baseUrl, objectMapper, 1)
+      .setOnMessage((message, eventType, client) -> client.addEvent(
+        objectMapper.readValue(message, Event.class)))
+      .connectWithBlocking()
+      .waitUntilEventQueueIsFull()
+      .closeAndReturnEventQueue();
 
-      @Override
-      public void onMessage(String message) {
-        try {
-          Event event = objectMapper.readValue(message, Event.class);
-          switch (event.getType()) {
-            case INTERLOCUTOR_FOUND -> {
-              InterlocutorFoundEvent interlocutorFoundEvent = objectMapper.readValue(message,
-                InterlocutorFoundEvent.class);
-
-              if (interlocutorFoundEvent.isAbleToWrite()) {
-                send(objectMapper.writeValueAsString(new ChatMessageEvent("Hello, world!")));
-              }
-            }
-            case NO_ONE_TO_TALK -> eventQueue.add(objectMapper.readValue(message,
-              Event.class));
-          }
-        } catch (JsonProcessingException e) {
-          throw new RuntimeException(e);
-        }
-      }
-
-      @Override
-      public void onClose(int code, String reason, boolean remote) {
-      }
-
-      @Override
-      public void onError(Exception ex) {
-      }
-    }.connectBlocking();
-
-    eventQueue.waitUntilFull();
-
-    Event event = eventQueue.poll();
+    final Event event = secondEventQueue.poll();
     assertNotNull(event);
     assertEquals(EventType.NO_ONE_TO_TALK, event.getType());
   }
