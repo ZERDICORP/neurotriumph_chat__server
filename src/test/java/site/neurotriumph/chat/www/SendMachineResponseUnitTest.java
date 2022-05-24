@@ -1,9 +1,7 @@
 package site.neurotriumph.chat.www;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.concurrent.ScheduledFuture;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -29,26 +27,21 @@ public class SendMachineResponseUnitTest {
 
   @Test
   public void shouldSendEventAndRemoveRoomAndThanTerminateMethodBecauseResponseIsNull() throws IOException {
-    Room room = new Room(null, null);
-
-    List<Room> spiedRooms = Mockito.spy(new ArrayList<>());
-    ReflectionTestUtils.setField(roomService, "rooms", spiedRooms);
-    Mockito.doReturn(true)
-      .when(spiedRooms)
-      .remove(ArgumentMatchers.eq(room));
-
-    Interlocutor spiedUser = Mockito.spy(new Human(null));
+    Human spiedUser = Mockito.spy(new Human(null));
     Mockito.doNothing()
       .when(spiedUser)
       .send(ArgumentMatchers.eq(new DisconnectEvent(DisconnectReason.INTERLOCUTOR_DISCONNECTED)));
+    Mockito.doNothing()
+      .when(spiedUser)
+      .close();
 
-    roomService.sendMachineResponse(null, spiedUser, room);
+    roomService.sendMachineResponse(null, spiedUser, null);
 
     Mockito.verify(spiedUser, Mockito.times(1))
       .send(ArgumentMatchers.eq(new DisconnectEvent(DisconnectReason.INTERLOCUTOR_DISCONNECTED)));
 
-    Mockito.verify(spiedRooms, Mockito.times(1))
-      .remove(ArgumentMatchers.eq(room));
+    Mockito.verify(spiedUser, Mockito.times(1))
+      .close();
   }
 
   @Test

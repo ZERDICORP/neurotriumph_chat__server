@@ -1,8 +1,6 @@
 package site.neurotriumph.chat.www;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -13,7 +11,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.test.util.ReflectionTestUtils;
 import site.neurotriumph.chat.www.entity.NeuralNetwork;
 import site.neurotriumph.chat.www.interlocutor.Human;
 import site.neurotriumph.chat.www.interlocutor.Interlocutor;
@@ -49,10 +46,13 @@ public class MakeChoiceUnitTest {
 
     Interlocutor spiedInterlocutor = Mockito.spy(new Machine(spiedNeuralNetwork));
 
-    Interlocutor spiedSender = Mockito.spy(new Human(null));
+    Human spiedSender = Mockito.spy(new Human(null));
     Mockito.doNothing()
       .when(spiedSender)
       .send(ArgumentMatchers.eq(new Event(EventType.IT_WAS_A_MACHINE)));
+    Mockito.doNothing()
+      .when(spiedSender)
+      .close();
 
     Room spiedRoom = Mockito.spy(new Room(spiedSender, spiedInterlocutor));
     Mockito.doReturn(requiredNumberOfMessagesToMakeChoice)
@@ -62,13 +62,7 @@ public class MakeChoiceUnitTest {
       .when(spiedRoom)
       .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
-    List<Room> spiedRooms = Mockito.spy(new ArrayList<>());
-    ReflectionTestUtils.setField(roomService, "rooms", spiedRooms);
-
     RoomService spiedRoomService = Mockito.spy(roomService);
-    Mockito.doNothing()
-      .when(spiedRoomService)
-      .removeAndCancelScheduledTask(ArgumentMatchers.eq(spiedSender));
     Mockito.doReturn(Optional.of(spiedRoom))
       .when(spiedRoomService)
       .findRoom(ArgumentMatchers.eq(spiedSender));
@@ -81,23 +75,20 @@ public class MakeChoiceUnitTest {
     Mockito.verify(spiedRoom, Mockito.times(1))
       .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
-    Mockito.verify(spiedInterlocutor, Mockito.times(2))
+    Mockito.verify(spiedInterlocutor, Mockito.times(3))
       .isHuman();
-
-    Mockito.verify(spiedRooms, Mockito.times(1))
-      .remove(ArgumentMatchers.eq(spiedRoom));
-
-    Mockito.verify(spiedRoomService, Mockito.times(1))
-      .removeAndCancelScheduledTask(ArgumentMatchers.eq(spiedSender));
 
     Mockito.verify(spiedMakeChoiceEvent, Mockito.times(1))
       .getChoice();
 
-    Mockito.verify(spiedSender, Mockito.times(0))
-      .send(ArgumentMatchers.eq(new Event(EventType.IT_WAS_A_HUMAN)));
-
     Mockito.verify(spiedSender, Mockito.times(1))
       .send(ArgumentMatchers.eq(new Event(EventType.IT_WAS_A_MACHINE)));
+
+    Mockito.verify(spiedSender, Mockito.times(1))
+      .close();
+
+    Mockito.verify(spiedSender, Mockito.times(0))
+      .send(ArgumentMatchers.eq(new Event(EventType.IT_WAS_A_HUMAN)));
 
     Mockito.verify(spiedNeuralNetwork, Mockito.times(1))
       .incrementTests_passed();
@@ -114,15 +105,21 @@ public class MakeChoiceUnitTest {
       .when(spiedMakeChoiceEvent)
       .getChoice();
 
-    Interlocutor spiedInterlocutor = Mockito.spy(new Human(null));
+    Human spiedInterlocutor = Mockito.spy(new Human(null));
     Mockito.doNothing()
       .when(spiedInterlocutor)
       .send(ArgumentMatchers.any(DisconnectEvent.class));
+    Mockito.doNothing()
+      .when(spiedInterlocutor)
+      .close();
 
-    Interlocutor spiedSender = Mockito.spy(new Human(null));
+    Human spiedSender = Mockito.spy(new Human(null));
     Mockito.doNothing()
       .when(spiedSender)
       .send(ArgumentMatchers.eq(new Event(EventType.IT_WAS_A_HUMAN)));
+    Mockito.doNothing()
+      .when(spiedSender)
+      .close();
 
     Room spiedRoom = Mockito.spy(new Room(spiedSender, spiedInterlocutor));
     Mockito.doReturn(requiredNumberOfMessagesToMakeChoice)
@@ -132,13 +129,7 @@ public class MakeChoiceUnitTest {
       .when(spiedRoom)
       .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
-    List<Room> spiedRooms = Mockito.spy(new ArrayList<>());
-    ReflectionTestUtils.setField(roomService, "rooms", spiedRooms);
-
     RoomService spiedRoomService = Mockito.spy(roomService);
-    Mockito.doNothing()
-      .when(spiedRoomService)
-      .removeAndCancelScheduledTask(ArgumentMatchers.eq(spiedSender));
     Mockito.doReturn(Optional.of(spiedRoom))
       .when(spiedRoomService)
       .findRoom(ArgumentMatchers.eq(spiedSender));
@@ -151,23 +142,23 @@ public class MakeChoiceUnitTest {
     Mockito.verify(spiedRoom, Mockito.times(1))
       .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
-    Mockito.verify(spiedInterlocutor, Mockito.times(2))
+    Mockito.verify(spiedInterlocutor, Mockito.times(3))
       .isHuman();
 
     Mockito.verify(spiedInterlocutor, Mockito.times(1))
       .send(ArgumentMatchers.any(DisconnectEvent.class));
 
-    Mockito.verify(spiedRooms, Mockito.times(1))
-      .remove(ArgumentMatchers.eq(spiedRoom));
-
-    Mockito.verify(spiedRoomService, Mockito.times(1))
-      .removeAndCancelScheduledTask(ArgumentMatchers.eq(spiedSender));
+    Mockito.verify(spiedInterlocutor, Mockito.times(1))
+      .close();
 
     Mockito.verify(spiedMakeChoiceEvent, Mockito.times(1))
       .getChoice();
 
     Mockito.verify(spiedSender, Mockito.times(1))
       .send(ArgumentMatchers.eq(new Event(EventType.IT_WAS_A_HUMAN)));
+
+    Mockito.verify(spiedSender, Mockito.times(1))
+      .close();
 
     Mockito.verify(spiedSender, Mockito.times(0))
       .send(ArgumentMatchers.eq(new Event(EventType.IT_WAS_A_MACHINE)));
@@ -188,10 +179,13 @@ public class MakeChoiceUnitTest {
 
     Interlocutor spiedInterlocutor = Mockito.spy(new Machine(spiedNeuralNetwork));
 
-    Interlocutor spiedSender = Mockito.spy(new Human(null));
+    Human spiedSender = Mockito.spy(new Human(null));
     Mockito.doNothing()
       .when(spiedSender)
       .send(ArgumentMatchers.eq(new Event(EventType.YOU_ARE_RIGHT)));
+    Mockito.doNothing()
+      .when(spiedSender)
+      .close();
 
     Room spiedRoom = Mockito.spy(new Room(spiedSender, spiedInterlocutor));
     Mockito.doReturn(requiredNumberOfMessagesToMakeChoice)
@@ -201,13 +195,7 @@ public class MakeChoiceUnitTest {
       .when(spiedRoom)
       .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
-    List<Room> spiedRooms = Mockito.spy(new ArrayList<>());
-    ReflectionTestUtils.setField(roomService, "rooms", spiedRooms);
-
     RoomService spiedRoomService = Mockito.spy(roomService);
-    Mockito.doNothing()
-      .when(spiedRoomService)
-      .removeAndCancelScheduledTask(ArgumentMatchers.eq(spiedSender));
     Mockito.doReturn(Optional.of(spiedRoom))
       .when(spiedRoomService)
       .findRoom(ArgumentMatchers.eq(spiedSender));
@@ -223,17 +211,14 @@ public class MakeChoiceUnitTest {
     Mockito.verify(spiedInterlocutor, Mockito.times(3))
       .isHuman();
 
-    Mockito.verify(spiedRooms, Mockito.times(1))
-      .remove(ArgumentMatchers.eq(spiedRoom));
-
-    Mockito.verify(spiedRoomService, Mockito.times(1))
-      .removeAndCancelScheduledTask(ArgumentMatchers.eq(spiedSender));
-
     Mockito.verify(spiedMakeChoiceEvent, Mockito.times(3))
       .getChoice();
 
     Mockito.verify(spiedSender, Mockito.times(1))
       .send(ArgumentMatchers.eq(new Event(EventType.YOU_ARE_RIGHT)));
+
+    Mockito.verify(spiedSender, Mockito.times(1))
+      .close();
 
     Mockito.verify(spiedNeuralNetwork, Mockito.times(1))
       .incrementTests_failed();
@@ -250,15 +235,21 @@ public class MakeChoiceUnitTest {
       .when(spiedMakeChoiceEvent)
       .getChoice();
 
-    Interlocutor spiedInterlocutor = Mockito.spy(new Human(null));
+    Human spiedInterlocutor = Mockito.spy(new Human(null));
     Mockito.doNothing()
       .when(spiedInterlocutor)
       .send(ArgumentMatchers.any(DisconnectEvent.class));
+    Mockito.doNothing()
+      .when(spiedInterlocutor)
+      .close();
 
-    Interlocutor spiedSender = Mockito.spy(new Human(null));
+    Human spiedSender = Mockito.spy(new Human(null));
     Mockito.doNothing()
       .when(spiedSender)
       .send(ArgumentMatchers.eq(new Event(EventType.YOU_ARE_RIGHT)));
+    Mockito.doNothing()
+      .when(spiedSender)
+      .close();
 
     Room spiedRoom = Mockito.spy(new Room(spiedSender, spiedInterlocutor));
     Mockito.doReturn(requiredNumberOfMessagesToMakeChoice)
@@ -268,13 +259,7 @@ public class MakeChoiceUnitTest {
       .when(spiedRoom)
       .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
-    List<Room> spiedRooms = Mockito.spy(new ArrayList<>());
-    ReflectionTestUtils.setField(roomService, "rooms", spiedRooms);
-
     RoomService spiedRoomService = Mockito.spy(roomService);
-    Mockito.doNothing()
-      .when(spiedRoomService)
-      .removeAndCancelScheduledTask(ArgumentMatchers.eq(spiedSender));
     Mockito.doReturn(Optional.of(spiedRoom))
       .when(spiedRoomService)
       .findRoom(ArgumentMatchers.eq(spiedSender));
@@ -293,17 +278,17 @@ public class MakeChoiceUnitTest {
     Mockito.verify(spiedInterlocutor, Mockito.times(1))
       .send(ArgumentMatchers.any(DisconnectEvent.class));
 
-    Mockito.verify(spiedRooms, Mockito.times(1))
-      .remove(ArgumentMatchers.eq(spiedRoom));
-
-    Mockito.verify(spiedRoomService, Mockito.times(1))
-      .removeAndCancelScheduledTask(ArgumentMatchers.eq(spiedSender));
+    Mockito.verify(spiedInterlocutor, Mockito.times(1))
+      .close();
 
     Mockito.verify(spiedMakeChoiceEvent, Mockito.times(2))
       .getChoice();
 
     Mockito.verify(spiedSender, Mockito.times(1))
       .send(ArgumentMatchers.eq(new Event(EventType.YOU_ARE_RIGHT)));
+
+    Mockito.verify(spiedSender, Mockito.times(1))
+      .close();
 
     Mockito.verify(neuralNetworkRepository, Mockito.times(0))
       .save(ArgumentMatchers.any(NeuralNetwork.class));
@@ -321,10 +306,13 @@ public class MakeChoiceUnitTest {
 
     Interlocutor spiedInterlocutor = Mockito.spy(new Machine(spiedNeuralNetwork));
 
-    Interlocutor spiedSender = Mockito.spy(new Human(null));
+    Human spiedSender = Mockito.spy(new Human(null));
     Mockito.doNothing()
       .when(spiedSender)
       .send(ArgumentMatchers.eq(new Event(EventType.YOU_ARE_WRONG)));
+    Mockito.doNothing()
+      .when(spiedSender)
+      .close();
 
     Room spiedRoom = Mockito.spy(new Room(spiedSender, spiedInterlocutor));
     Mockito.doReturn(requiredNumberOfMessagesToMakeChoice)
@@ -334,13 +322,7 @@ public class MakeChoiceUnitTest {
       .when(spiedRoom)
       .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
-    List<Room> spiedRooms = Mockito.spy(new ArrayList<>());
-    ReflectionTestUtils.setField(roomService, "rooms", spiedRooms);
-
     RoomService spiedRoomService = Mockito.spy(roomService);
-    Mockito.doNothing()
-      .when(spiedRoomService)
-      .removeAndCancelScheduledTask(ArgumentMatchers.eq(spiedSender));
     Mockito.doReturn(Optional.of(spiedRoom))
       .when(spiedRoomService)
       .findRoom(ArgumentMatchers.eq(spiedSender));
@@ -356,12 +338,6 @@ public class MakeChoiceUnitTest {
     Mockito.verify(spiedInterlocutor, Mockito.times(3))
       .isHuman();
 
-    Mockito.verify(spiedRooms, Mockito.times(1))
-      .remove(ArgumentMatchers.eq(spiedRoom));
-
-    Mockito.verify(spiedRoomService, Mockito.times(1))
-      .removeAndCancelScheduledTask(ArgumentMatchers.eq(spiedSender));
-
     Mockito.verify(spiedMakeChoiceEvent, Mockito.times(3))
       .getChoice();
 
@@ -370,6 +346,9 @@ public class MakeChoiceUnitTest {
 
     Mockito.verify(spiedNeuralNetwork, Mockito.times(1))
       .incrementTests_passed();
+
+    Mockito.verify(spiedSender, Mockito.times(1))
+      .close();
 
     Mockito.verify(neuralNetworkRepository, Mockito.times(1))
       .save(ArgumentMatchers.eq(spiedNeuralNetwork));
@@ -383,15 +362,21 @@ public class MakeChoiceUnitTest {
       .when(spiedMakeChoiceEvent)
       .getChoice();
 
-    Interlocutor spiedInterlocutor = Mockito.spy(new Human(null));
+    Human spiedInterlocutor = Mockito.spy(new Human(null));
     Mockito.doNothing()
       .when(spiedInterlocutor)
       .send(ArgumentMatchers.any(DisconnectEvent.class));
+    Mockito.doNothing()
+      .when(spiedInterlocutor)
+      .close();
 
-    Interlocutor spiedSender = Mockito.spy(new Human(null));
+    Human spiedSender = Mockito.spy(new Human(null));
     Mockito.doNothing()
       .when(spiedSender)
       .send(ArgumentMatchers.eq(new Event(EventType.YOU_ARE_WRONG)));
+    Mockito.doNothing()
+      .when(spiedSender)
+      .close();
 
     Room spiedRoom = Mockito.spy(new Room(spiedSender, spiedInterlocutor));
     Mockito.doReturn(requiredNumberOfMessagesToMakeChoice)
@@ -401,13 +386,7 @@ public class MakeChoiceUnitTest {
       .when(spiedRoom)
       .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
-    List<Room> spiedRooms = Mockito.spy(new ArrayList<>());
-    ReflectionTestUtils.setField(roomService, "rooms", spiedRooms);
-
     RoomService spiedRoomService = Mockito.spy(roomService);
-    Mockito.doNothing()
-      .when(spiedRoomService)
-      .removeAndCancelScheduledTask(ArgumentMatchers.eq(spiedSender));
     Mockito.doReturn(Optional.of(spiedRoom))
       .when(spiedRoomService)
       .findRoom(ArgumentMatchers.eq(spiedSender));
@@ -426,17 +405,17 @@ public class MakeChoiceUnitTest {
     Mockito.verify(spiedInterlocutor, Mockito.times(1))
       .send(ArgumentMatchers.any(DisconnectEvent.class));
 
-    Mockito.verify(spiedRooms, Mockito.times(1))
-      .remove(ArgumentMatchers.eq(spiedRoom));
-
-    Mockito.verify(spiedRoomService, Mockito.times(1))
-      .removeAndCancelScheduledTask(ArgumentMatchers.eq(spiedSender));
+    Mockito.verify(spiedInterlocutor, Mockito.times(1))
+      .close();
 
     Mockito.verify(spiedMakeChoiceEvent, Mockito.times(3))
       .getChoice();
 
     Mockito.verify(spiedSender, Mockito.times(1))
       .send(ArgumentMatchers.eq(new Event(EventType.YOU_ARE_WRONG)));
+
+    Mockito.verify(spiedSender, Mockito.times(1))
+      .close();
 
     Mockito.verify(neuralNetworkRepository, Mockito.times(0))
       .save(ArgumentMatchers.any(NeuralNetwork.class));

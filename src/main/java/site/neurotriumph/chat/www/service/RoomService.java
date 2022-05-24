@@ -18,6 +18,7 @@ import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Service;
 import site.neurotriumph.chat.www.entity.NeuralNetwork;
+import site.neurotriumph.chat.www.interlocutor.Human;
 import site.neurotriumph.chat.www.interlocutor.Interlocutor;
 import site.neurotriumph.chat.www.interlocutor.Machine;
 import site.neurotriumph.chat.www.pojo.ChatMessageEvent;
@@ -102,12 +103,8 @@ public class RoomService {
     // choice.
     if (interlocutor.isHuman()) {
       interlocutor.send(new DisconnectEvent(DisconnectReason.INTERLOCUTOR_MAKE_A_CHOICE));
+      ((Human) interlocutor).close();
     }
-
-    rooms.remove(room);
-    // If the interlocutor is a machine, then the possible scheduled task
-    // should be removed and canceled.
-    removeAndCancelScheduledTask(sender);
 
     NeuralNetwork neuralNetwork = null;
     if (!interlocutor.isHuman()) {
@@ -116,20 +113,19 @@ public class RoomService {
 
     // The user finds it difficult to choose.
     if (makeChoiceEvent.getChoice() == Choice.IDK) {
-      if (neuralNetwork == null) {
-        sender.send(new Event(EventType.IT_WAS_A_HUMAN));
-        return;
+      sender.send(new Event(interlocutor.isHuman() ?
+        EventType.IT_WAS_A_HUMAN : EventType.IT_WAS_A_MACHINE));
+      ((Human) sender).close();
+      if (neuralNetwork != null) {
+        neuralNetworkRepository.save(neuralNetwork.incrementTests_passed());
       }
-
-      sender.send(new Event(EventType.IT_WAS_A_MACHINE));
-      neuralNetworkRepository.save(neuralNetwork.incrementTests_passed());
-
       return;
     }
 
     if ((makeChoiceEvent.getChoice() == Choice.ITS_A_HUMAN && interlocutor.isHuman()) ||
       (makeChoiceEvent.getChoice() == Choice.ITS_A_MACHINE && !interlocutor.isHuman())) {
       sender.send(new Event(EventType.YOU_ARE_RIGHT));
+      ((Human) sender).close();
       if (neuralNetwork != null) {
         neuralNetworkRepository.save(neuralNetwork.incrementTests_failed());
       }
@@ -137,6 +133,7 @@ public class RoomService {
     }
 
     sender.send(new Event(EventType.YOU_ARE_WRONG));
+    ((Human) sender).close();
     if (neuralNetwork != null) {
       neuralNetworkRepository.save(neuralNetwork.incrementTests_passed());
     }
@@ -242,7 +239,7 @@ public class RoomService {
     // can consider this as a disconnect.
     if (response == null) {
       user.send(new DisconnectEvent(DisconnectReason.INTERLOCUTOR_DISCONNECTED));
-      rooms.remove(room);
+      ((Human) user).close();
       return;
     }
 
