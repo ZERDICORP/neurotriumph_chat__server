@@ -1,24 +1,18 @@
 package site.neurotriumph.chat.www.service;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.beans.factory.config.ConfigurableBeanFactory;
-import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Service;
 import site.neurotriumph.chat.www.entity.NeuralNetwork;
-import site.neurotriumph.chat.www.interlocutor.Human;
 import site.neurotriumph.chat.www.interlocutor.Interlocutor;
 import site.neurotriumph.chat.www.interlocutor.Machine;
 import site.neurotriumph.chat.www.pojo.ChatMessageEvent;
@@ -31,9 +25,9 @@ import site.neurotriumph.chat.www.pojo.InterlocutorFoundEvent;
 import site.neurotriumph.chat.www.pojo.MakeChoiceEvent;
 import site.neurotriumph.chat.www.repository.NeuralNetworkRepository;
 import site.neurotriumph.chat.www.room.Room;
+import site.neurotriumph.chat.www.storage.RoomStorage;
 
 @Service
-@Scope(value = ConfigurableBeanFactory.SCOPE_SINGLETON)
 public class RoomService {
   @Value("${app.chat_messaging_delay}")
   private long chatMessagingDelay;
@@ -41,57 +35,55 @@ public class RoomService {
   private long requiredNumberOfMessagesToMakeChoice;
   @Autowired
   private NeuralNetworkRepository neuralNetworkRepository;
-  private final ScheduledExecutorService executorService;
-  private final Random random;
-  private final List<Room> rooms;
-  private final Map<Interlocutor, ScheduledFuture<?>> scheduledTasks;
+  @Autowired
+  private RoomStorage roomStorage;
+  @Autowired
+  @Qualifier("random")
+  private Random random;
+  @Autowired
+  @Qualifier("scheduledExecutorService")
+  private ScheduledExecutorService scheduledExecutorService;
+  @Autowired
+  @Qualifier("executorService")
+  private ExecutorService executorService;
 
-  {
-    executorService = Executors.newSingleThreadScheduledExecutor();
-    random = new Random();
-    rooms = new ArrayList<>();
-    scheduledTasks = new HashMap<>();
-  }
-
-  public void removeAndCancelScheduledTask(Interlocutor interlocutor) {
-    ScheduledFuture<?> scheduledTask = scheduledTasks.remove(interlocutor);
-    if (scheduledTask != null) {
-      scheduledTask.cancel(false);
+  public void excludeRoom(Room room) {
+    final ScheduledFuture<?> scheduledFuture = roomStorage.exclude(room);
+    if (scheduledFuture != null) {
+      scheduledFuture.cancel(false);
     }
   }
 
-  public Optional<Room> findRoom(Interlocutor sender) {
-    return rooms.stream()
-      .filter(r -> r.has(sender))
-      .findFirst();
-  }
+  public void destroyRoomAndNotifyInterlocutor(Interlocutor user) throws IOException {
+    synchronized (roomStorage) {
+      final Optional<Room> foundRoom = roomStorage.findByInterlocutor(user);
+      if (foundRoom.isEmpty()) {
+        return;
+      }
 
-  public void onUserDisconnect(Interlocutor user) throws IOException {
-    final Optional<Room> foundRoom = findRoom(user);
-    if (foundRoom.isEmpty()) {
-      return;
+      final Room room = foundRoom.get();
+      final Interlocutor interlocutor = room.getAnotherInterlocutor(user);
+      if (interlocutor.isHuman()) {
+        interlocutor.send(new DisconnectEvent(DisconnectReason.INTERLOCUTOR_DISCONNECTED));
+      }
+
+      excludeRoom(room);
     }
-
-    final Room room = foundRoom.get();
-    final Interlocutor interlocutor = room.getAnotherInterlocutor(user);
-
-    if (interlocutor.isHuman()) {
-      interlocutor.send(new DisconnectEvent(DisconnectReason.INTERLOCUTOR_DISCONNECTED));
-    }
-
-    rooms.remove(room);
-    // If the interlocutor is a machine, then the possible scheduled task
-    // should be removed and canceled.
-    removeAndCancelScheduledTask(user);
   }
 
   public void makeChoice(Interlocutor sender, MakeChoiceEvent makeChoiceEvent) throws IOException {
-    final Optional<Room> foundRoom = findRoom(sender);
-    if (foundRoom.isEmpty()) {
-      return;
+    final Room room;
+
+    synchronized (roomStorage) {
+      final Optional<Room> foundRoom = roomStorage.findByInterlocutor(sender);
+      if (foundRoom.isEmpty()) {
+        return;
+      }
+
+      room = foundRoom.get();
+      excludeRoom(room);
     }
 
-    final Room room = foundRoom.get();
     // You can make a choice only after the N-th number of messages.
     if (room.getMessageCounter() < requiredNumberOfMessagesToMakeChoice) {
       return;
@@ -103,7 +95,6 @@ public class RoomService {
     // choice.
     if (interlocutor.isHuman()) {
       interlocutor.send(new DisconnectEvent(DisconnectReason.INTERLOCUTOR_MAKE_A_CHOICE));
-      ((Human) interlocutor).close();
     }
 
     NeuralNetwork neuralNetwork = null;
@@ -115,7 +106,6 @@ public class RoomService {
     if (makeChoiceEvent.getChoice() == Choice.IDK) {
       sender.send(new Event(interlocutor.isHuman() ?
         EventType.IT_WAS_A_HUMAN : EventType.IT_WAS_A_MACHINE));
-      ((Human) sender).close();
       if (neuralNetwork != null) {
         neuralNetworkRepository.save(neuralNetwork.incrementTests_passed());
       }
@@ -125,7 +115,6 @@ public class RoomService {
     if ((makeChoiceEvent.getChoice() == Choice.ITS_A_HUMAN && interlocutor.isHuman()) ||
       (makeChoiceEvent.getChoice() == Choice.ITS_A_MACHINE && !interlocutor.isHuman())) {
       sender.send(new Event(EventType.YOU_ARE_RIGHT));
-      ((Human) sender).close();
       if (neuralNetwork != null) {
         neuralNetworkRepository.save(neuralNetwork.incrementTests_failed());
       }
@@ -133,14 +122,13 @@ public class RoomService {
     }
 
     sender.send(new Event(EventType.YOU_ARE_WRONG));
-    ((Human) sender).close();
     if (neuralNetwork != null) {
       neuralNetworkRepository.save(neuralNetwork.incrementTests_passed());
     }
   }
 
   public void sendMessage(Interlocutor sender, ChatMessageEvent chatMessageEvent) throws IOException {
-    final Optional<Room> foundRoom = findRoom(sender);
+    final Optional<Room> foundRoom = roomStorage.findByInterlocutor(sender);
     if (foundRoom.isEmpty()) {
       return;
     }
@@ -190,16 +178,11 @@ public class RoomService {
   }
 
   public void create(Interlocutor firstInterlocutor, Interlocutor secondInterlocutor) throws IOException {
-    System.out.println("CREATE ROOM: BEGIN"); // TODO: delete debug log
-
-    rooms.add(new Room(firstInterlocutor, secondInterlocutor));
-    final Room room = rooms.get(rooms.size() - 1);
+    final Room room = roomStorage.createNew(firstInterlocutor, secondInterlocutor);
 
     // If rand == 0, then firstInterlocutor starts writing first, otherwise
     // (rand == 1) - starts writing secondInterlocutor.
     final int rand = random.nextInt(2);
-
-    System.out.println("SPEAKS FIRST: " + rand); // TODO: delete debug log
 
     // If the second interlocutor writes first, we need to swap interlocutors
     // in places.
@@ -223,14 +206,17 @@ public class RoomService {
       return;
     }
 
-    // Sending a request to an API to create the initial chat message and get
-    // a response.
-    secondInterlocutor.send(new Event(EventType.INIT_CHAT_MESSAGE));
-
-    // Forwarding machine response to the user.
-    sendMachineResponse(((Machine) secondInterlocutor).getResponse(), firstInterlocutor, room);
-
-    System.out.println("CREATE ROOM: END"); // TODO: delete debug log
+    executorService.execute(() -> {
+      try {
+        // Sending a request to an API to create the initial chat message and get
+        // a response.
+        secondInterlocutor.send(new Event(EventType.INIT_CHAT_MESSAGE));
+        // Forwarding machine response to the user.
+        sendMachineResponse(((Machine) secondInterlocutor).getResponse(), firstInterlocutor, room);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    });
   }
 
   public void sendMachineResponse(ChatMessageEvent response, Interlocutor user, Room room) throws IOException {
@@ -239,12 +225,12 @@ public class RoomService {
     // can consider this as a disconnect.
     if (response == null) {
       user.send(new DisconnectEvent(DisconnectReason.INTERLOCUTOR_DISCONNECTED));
-      ((Human) user).close();
+      excludeRoom(room);
       return;
     }
 
     // We schedule to send the machine's response to the user (simulated delay).
-    scheduledTasks.put(user, executorService.schedule(() -> {
+    roomStorage.addTask(room, scheduledExecutorService.schedule(() -> {
       try {
         user.send(response);
       } catch (IOException e) {

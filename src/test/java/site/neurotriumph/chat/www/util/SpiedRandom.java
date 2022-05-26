@@ -1,7 +1,9 @@
 package site.neurotriumph.chat.www.util;
 
 import java.util.Random;
+import org.springframework.stereotype.Component;
 
+@Component("spiedRandom")
 public class SpiedRandom extends Random {
   public SpiedRandom() {
     super();

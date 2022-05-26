@@ -23,7 +23,17 @@ public class EventQueue {
     }
   }
 
+  public void waitUntil(int i) throws InterruptedException {
+    while (blockingQueue.size() < i) {
+      Thread.sleep(100);
+    }
+  }
+
   public Event poll() {
     return blockingQueue.poll();
+  }
+
+  public boolean isFull() {
+    return blockingQueue.size() == capacity;
   }
 }

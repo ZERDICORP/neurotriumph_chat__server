@@ -11,11 +11,11 @@ import org.slf4j.LoggerFactory;
 import site.neurotriumph.chat.www.pojo.ChatMessageEvent;
 
 public class EchoServer implements Runnable {
-  private Logger logger;
+  private final Logger logger;
   private final int PORT;
   private final ObjectMapper objectMapper;
-  private boolean isRunning;
   private ServerSocket serverSocket;
+  private volatile boolean isRunning;
 
   {
     logger = LoggerFactory.getLogger(EchoServer.class);
@@ -32,10 +32,9 @@ public class EchoServer implements Runnable {
       logger.info("EchoServer has been started on port " + PORT + "..");
 
       while (isRunning) {
-        Socket clientSocket = serverSocket.accept();
+        final Socket clientSocket = serverSocket.accept();
 
-        System.out.println("Connected: " + clientSocket.getInetAddress().getHostName());
-        System.out.println("\nResponse: ");
+        logger.info("Connected: " + clientSocket.getInetAddress().getHostName());
 
         PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
 
@@ -46,11 +45,11 @@ public class EchoServer implements Runnable {
           "\r\n" +
           body;
 
-        System.out.println(response);
-        System.out.println("\n");
+        logger.info("Response:\n" + response + "\n");
 
         out.println(response);
       }
+
     } catch (IOException e) {
       if (Objects.equals(e.getMessage(), "Socket closed")) {
         logger.info("EchoServer has been stopped..");

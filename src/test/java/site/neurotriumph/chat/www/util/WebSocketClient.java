@@ -51,11 +51,12 @@ public class WebSocketClient extends org.java_websocket.client.WebSocketClient {
   @Override
   public void send(String message) {
     super.send(message);
-    System.out.println("WAS SENT: " + message); // TODO: delete debug log
   }
 
   public void addEvent(Event event) {
-    eventQueue.add(event);
+    if (!eventQueue.isFull()) {
+      eventQueue.add(event);
+    }
   }
 
   public EventQueue closeAndReturnEventQueue() throws InterruptedException {

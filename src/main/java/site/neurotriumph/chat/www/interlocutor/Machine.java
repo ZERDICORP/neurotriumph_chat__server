@@ -41,10 +41,9 @@ public class Machine extends Interlocutor {
   @Override
   public void send(Event event) throws IOException {
     try {
-      HttpEntity<Event> entity = new HttpEntity<>(event, headers);
+      final HttpEntity<Event> entity = new HttpEntity<>(event, headers);
       response = restTemplate.postForObject(neuralNetwork.getApi_root(), entity, ChatMessageEvent.class);
     } catch (RestClientException e) {
-      System.out.println("Failed to send request to NN api: " + e); // TODO: delete debug log
       response = null;
       onError.run();
     }

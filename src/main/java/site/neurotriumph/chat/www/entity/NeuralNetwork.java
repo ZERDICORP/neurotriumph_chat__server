@@ -34,7 +34,7 @@ public class NeuralNetwork {
   @Column(nullable = false)
   private String api_secret;
 
-  @Column(columnDefinition = "TINYINT(1) DEFAULT 1", nullable = false)
+  @Column(columnDefinition = "TINYINT(1) DEFAULT 0", nullable = false)
   private boolean invalid_api = false;
 
   @Column(columnDefinition = "TINYINT(1) DEFAULT 1", nullable = false)

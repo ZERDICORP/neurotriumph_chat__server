@@ -16,10 +16,8 @@ public class Human extends Interlocutor {
 
   @Override
   public void send(Event event) throws IOException {
-    synchronized (webSocketSession) {
-      if (webSocketSession.isOpen()) {
-        webSocketSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(event)));
-      }
+    if (webSocketSession.isOpen()) {
+      webSocketSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(event)));
     }
   }
 
@@ -29,11 +27,17 @@ public class Human extends Interlocutor {
 
   @Override
   public boolean equals(Object o) {
-    if (this == o)
+    if (this == o) {
       return true;
+    }
 
-    if (o == null || getClass() != o.getClass())
+    if (o == null || getClass() != o.getClass()) {
       return false;
+    }
+
+    if (!webSocketSession.getId().equals(((Human) o).webSocketSession.getId())) {
+      return false;
+    }
 
     return Objects.equals(webSocketSession, ((Human) o).webSocketSession);
   }

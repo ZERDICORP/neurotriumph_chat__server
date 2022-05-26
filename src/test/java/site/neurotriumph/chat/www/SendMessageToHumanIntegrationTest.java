@@ -39,7 +39,7 @@ public class SendMessageToHumanIntegrationTest {
   public void before() {
     baseUrl = "ws://localhost:" + serverPort + "/api/v1/bind";
 
-    ReflectionTestUtils.setField(lobbyService, "lobbySpentTime", 10000);
+    ReflectionTestUtils.setField(lobbyService, "lobbySpentTime", 30000);
   }
 
   @After

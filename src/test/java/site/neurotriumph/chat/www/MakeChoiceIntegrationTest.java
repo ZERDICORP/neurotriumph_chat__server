@@ -46,10 +46,7 @@ public class MakeChoiceIntegrationTest {
   @Before
   public void before() {
     baseUrl = "ws://localhost:" + serverPort + "/api/v1/bind";
-
-    echoServer = new EchoServer();
-
-    new Thread(echoServer).start();
+    new Thread(echoServer = new EchoServer()).start();
   }
 
   @After
@@ -102,7 +99,6 @@ public class MakeChoiceIntegrationTest {
   public void shouldSendIDKChoiceAndReceiveItWasAMachineEvent() throws Exception {
     final EventQueue eventQueue = new WebSocketClient(baseUrl, objectMapper, 1)
       .setOnMessage((message, eventType, client) -> {
-        System.out.println(eventType); // TODO: delete debug log
         switch (eventType) {
           case INTERLOCUTOR_FOUND -> client.send(objectMapper.writeValueAsString(
             new MakeChoiceEvent(Choice.IDK)));
@@ -124,7 +120,6 @@ public class MakeChoiceIntegrationTest {
   public void shouldSendItsAHumanChoiceAndReceiveYouAreWrongEvent() throws Exception {
     final EventQueue eventQueue = new WebSocketClient(baseUrl, objectMapper, 1)
       .setOnMessage((message, eventType, client) -> {
-        System.out.println(eventType); // TODO: delete debug log
         switch (eventType) {
           case INTERLOCUTOR_FOUND -> client.send(objectMapper.writeValueAsString(
             new MakeChoiceEvent(Choice.ITS_A_HUMAN)));
@@ -146,7 +141,6 @@ public class MakeChoiceIntegrationTest {
   public void shouldSendItsAMachineChoiceAndReceiveYouAreRightEvent() throws Exception {
     final EventQueue eventQueue = new WebSocketClient(baseUrl, objectMapper, 1)
       .setOnMessage((message, eventType, client) -> {
-        System.out.println(eventType); // TODO: delete debug log
         switch (eventType) {
           case INTERLOCUTOR_FOUND -> client.send(objectMapper.writeValueAsString(
             new MakeChoiceEvent(Choice.ITS_A_MACHINE)));

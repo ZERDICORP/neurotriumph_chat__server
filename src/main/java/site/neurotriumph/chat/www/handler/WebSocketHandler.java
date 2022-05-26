@@ -28,8 +28,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
   @Override
   public void afterConnectionEstablished(WebSocketSession webSocketSession) throws IOException {
-    System.out.println("CONNECTED: " + webSocketSession); // TODO: delete debug log
-
     Interlocutor joinedInterlocutor = new Human(webSocketSession);
     Interlocutor foundInterlocutor = lobbyService.findInterlocutor(joinedInterlocutor);
     // If we do find someone to talk to, we need to create a room and
@@ -37,14 +35,10 @@ public class WebSocketHandler extends TextWebSocketHandler {
     if (foundInterlocutor != null) {
       roomService.create(joinedInterlocutor, foundInterlocutor);
     }
-
-    System.out.println("FOUND INTERLOCUTOR: " + foundInterlocutor); // TODO: delete debug log
   }
 
   @Override
   protected void handleTextMessage(WebSocketSession webSocketSession, TextMessage message) throws IOException {
-    System.out.println("RECEIVED: " + message.getPayload()); // TODO: delete debug log
-
     try {
       final Interlocutor user = new Human(webSocketSession);
       final Event event = objectMapper.readValue(message.getPayload(), Event.class);
@@ -65,7 +59,8 @@ public class WebSocketHandler extends TextWebSocketHandler {
   public void afterConnectionClosed(WebSocketSession webSocketSession, CloseStatus status) throws IOException {
     final Interlocutor user = new Human(webSocketSession);
 
-    lobbyService.onUserDisconnect(user);
-    roomService.onUserDisconnect(user);
+    if (!lobbyService.excludeFromLobby(user)) {
+      roomService.destroyRoomAndNotifyInterlocutor(user);
+    }
   }
 }

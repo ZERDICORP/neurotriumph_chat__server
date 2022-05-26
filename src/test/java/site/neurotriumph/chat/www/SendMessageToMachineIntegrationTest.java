@@ -35,9 +35,7 @@ public class SendMessageToMachineIntegrationTest {
   @Before
   public void before() {
     baseUrl = "ws://localhost:" + serverPort + "/api/v1/bind";
-    echoServer = new EchoServer();
-
-    new Thread(echoServer).start();
+    new Thread(echoServer = new EchoServer()).start();
   }
 
   @After

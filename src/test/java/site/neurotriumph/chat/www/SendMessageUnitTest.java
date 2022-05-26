@@ -1,16 +1,17 @@
 package site.neurotriumph.chat.www;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
+import java.util.Optional;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.util.ReflectionTestUtils;
 import site.neurotriumph.chat.www.interlocutor.Human;
@@ -19,14 +20,22 @@ import site.neurotriumph.chat.www.interlocutor.Machine;
 import site.neurotriumph.chat.www.pojo.ChatMessageEvent;
 import site.neurotriumph.chat.www.room.Room;
 import site.neurotriumph.chat.www.service.RoomService;
+import site.neurotriumph.chat.www.storage.RoomStorage;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
 public class SendMessageUnitTest {
   @Value("${app.chat_messaging_delay}")
   public long chatMessagingDelay;
-  @Autowired
+  @SpyBean
   private RoomService roomService;
+  @MockBean
+  private RoomStorage roomStorage;
+
+  @Before
+  public void before() {
+    ReflectionTestUtils.setField(roomService, "roomStorage", roomStorage);
+  }
 
   @Test
   public void shouldTerminateFunctionBecauseFoundRoomIsEmpty() throws IOException {
@@ -42,29 +51,13 @@ public class SendMessageUnitTest {
       .when(spiedFirstInterlocutor)
       .send(ArgumentMatchers.eq(chatMessageEvent));
 
-    Date spiedTimePoint = Mockito.spy(new Date());
-    Mockito.doReturn(new Date().getTime())
-      .when(spiedTimePoint)
-      .getTime();
-
     Room spiedRoom = Mockito.spy(new Room(spiedFirstInterlocutor, spiedSecondInterlocutor));
-    Mockito.doReturn(spiedTimePoint)
-      .when(spiedRoom)
-      .getTimePoint();
 
-    List<Room> rooms = new ArrayList<>();
-    rooms.add(spiedRoom);
-    ReflectionTestUtils.setField(roomService, "rooms", rooms);
+    Mockito.doReturn(Optional.empty())
+      .when(roomStorage)
+      .findByInterlocutor(ArgumentMatchers.eq(spiedFirstInterlocutor));
 
-    RoomService spiedRoomService = Mockito.spy(roomService);
-    Mockito.doNothing()
-      .when(spiedRoomService)
-      .sendMachineResponse(
-        ArgumentMatchers.eq(null),
-        ArgumentMatchers.eq(spiedFirstInterlocutor),
-        ArgumentMatchers.eq(spiedRoom));
-
-    spiedRoomService.sendMessage(new Human(null), chatMessageEvent);
+    roomService.sendMessage(spiedFirstInterlocutor, chatMessageEvent);
 
     Mockito.verify(spiedRoom, Mockito.times(0))
       .getFirstInterlocutor();
@@ -97,19 +90,21 @@ public class SendMessageUnitTest {
       .when(spiedRoom)
       .getTimePoint();
 
-    List<Room> rooms = new ArrayList<>();
-    rooms.add(spiedRoom);
-    ReflectionTestUtils.setField(roomService, "rooms", rooms);
+    Mockito.doReturn(Optional.of(spiedRoom))
+      .when(roomStorage)
+      .findByInterlocutor(ArgumentMatchers.eq(spiedSecondInterlocutor));
 
-    RoomService spiedRoomService = Mockito.spy(roomService);
     Mockito.doNothing()
-      .when(spiedRoomService)
+      .when(roomService)
       .sendMachineResponse(
         ArgumentMatchers.eq(null),
         ArgumentMatchers.eq(spiedFirstInterlocutor),
         ArgumentMatchers.eq(spiedRoom));
 
-    spiedRoomService.sendMessage(spiedSecondInterlocutor, chatMessageEvent);
+    roomService.sendMessage(spiedSecondInterlocutor, chatMessageEvent);
+
+    Mockito.verify(roomStorage, Mockito.times(1))
+      .findByInterlocutor(ArgumentMatchers.eq(spiedSecondInterlocutor));
 
     Mockito.verify(spiedRoom, Mockito.times(1))
       .getFirstInterlocutor();
@@ -139,7 +134,7 @@ public class SendMessageUnitTest {
       .send(ArgumentMatchers.eq(chatMessageEvent));
 
     Date spiedTimePoint = Mockito.spy(new Date());
-    Mockito.doReturn(new Date().getTime())
+    Mockito.doReturn(new Date().getTime() + 1000)
       .when(spiedTimePoint)
       .getTime();
 
@@ -148,19 +143,21 @@ public class SendMessageUnitTest {
       .when(spiedRoom)
       .getTimePoint();
 
-    List<Room> rooms = new ArrayList<>();
-    rooms.add(spiedRoom);
-    ReflectionTestUtils.setField(roomService, "rooms", rooms);
+    Mockito.doReturn(Optional.of(spiedRoom))
+      .when(roomStorage)
+      .findByInterlocutor(ArgumentMatchers.eq(spiedFirstInterlocutor));
 
-    RoomService spiedRoomService = Mockito.spy(roomService);
     Mockito.doNothing()
-      .when(spiedRoomService)
+      .when(roomService)
       .sendMachineResponse(
         ArgumentMatchers.eq(null),
         ArgumentMatchers.eq(spiedFirstInterlocutor),
         ArgumentMatchers.eq(spiedRoom));
 
-    spiedRoomService.sendMessage(spiedFirstInterlocutor, chatMessageEvent);
+    roomService.sendMessage(spiedFirstInterlocutor, chatMessageEvent);
+
+    Mockito.verify(roomStorage, Mockito.times(1))
+      .findByInterlocutor(ArgumentMatchers.eq(spiedFirstInterlocutor));
 
     Mockito.verify(spiedRoom, Mockito.times(1))
       .getFirstInterlocutor();
@@ -205,19 +202,21 @@ public class SendMessageUnitTest {
       .when(spiedRoom)
       .getTimePoint();
 
-    List<Room> rooms = new ArrayList<>();
-    rooms.add(spiedRoom);
-    ReflectionTestUtils.setField(roomService, "rooms", rooms);
+    Mockito.doReturn(Optional.of(spiedRoom))
+      .when(roomStorage)
+      .findByInterlocutor(ArgumentMatchers.eq(spiedFirstInterlocutor));
 
-    RoomService spiedRoomService = Mockito.spy(roomService);
     Mockito.doNothing()
-      .when(spiedRoomService)
+      .when(roomService)
       .sendMachineResponse(
         ArgumentMatchers.eq(null),
         ArgumentMatchers.eq(spiedFirstInterlocutor),
         ArgumentMatchers.eq(spiedRoom));
 
-    spiedRoomService.sendMessage(spiedFirstInterlocutor, chatMessageEvent);
+    roomService.sendMessage(spiedFirstInterlocutor, chatMessageEvent);
+
+    Mockito.verify(roomStorage, Mockito.times(1))
+      .findByInterlocutor(ArgumentMatchers.eq(spiedFirstInterlocutor));
 
     Mockito.verify(spiedRoom, Mockito.times(1))
       .getFirstInterlocutor();
@@ -246,7 +245,7 @@ public class SendMessageUnitTest {
     Mockito.verify(spiedRoom, Mockito.times(1))
       .increaseMessageCounter();
 
-    Mockito.verify(spiedRoomService, Mockito.times(1))
+    Mockito.verify(roomService, Mockito.times(1))
       .sendMachineResponse(
         ArgumentMatchers.eq(null),
         ArgumentMatchers.eq(spiedFirstInterlocutor),
@@ -277,11 +276,14 @@ public class SendMessageUnitTest {
       .when(spiedRoom)
       .getTimePoint();
 
-    List<Room> rooms = new ArrayList<>();
-    rooms.add(spiedRoom);
-    ReflectionTestUtils.setField(roomService, "rooms", rooms);
+    Mockito.doReturn(Optional.of(spiedRoom))
+      .when(roomStorage)
+      .findByInterlocutor(ArgumentMatchers.eq(spiedFirstInterlocutor));
 
     roomService.sendMessage(spiedFirstInterlocutor, chatMessageEvent);
+
+    Mockito.verify(roomStorage, Mockito.times(1))
+      .findByInterlocutor(ArgumentMatchers.eq(spiedFirstInterlocutor));
 
     Mockito.verify(spiedRoom, Mockito.times(1))
       .getFirstInterlocutor();

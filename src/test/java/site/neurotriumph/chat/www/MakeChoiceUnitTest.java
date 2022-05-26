@@ -2,15 +2,17 @@ package site.neurotriumph.chat.www;
 
 import java.io.IOException;
 import java.util.Optional;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.util.ReflectionTestUtils;
 import site.neurotriumph.chat.www.entity.NeuralNetwork;
 import site.neurotriumph.chat.www.interlocutor.Human;
 import site.neurotriumph.chat.www.interlocutor.Interlocutor;
@@ -23,16 +25,47 @@ import site.neurotriumph.chat.www.pojo.MakeChoiceEvent;
 import site.neurotriumph.chat.www.repository.NeuralNetworkRepository;
 import site.neurotriumph.chat.www.room.Room;
 import site.neurotriumph.chat.www.service.RoomService;
+import site.neurotriumph.chat.www.storage.RoomStorage;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
 public class MakeChoiceUnitTest {
   @Value("${app.required_number_of_messages_to_make_a_choice}")
   public int requiredNumberOfMessagesToMakeChoice;
-  @Autowired
+  @SpyBean
   private RoomService roomService;
   @MockBean
+  private RoomStorage roomStorage;
+  @MockBean
   private NeuralNetworkRepository neuralNetworkRepository;
+
+  @Before
+  public void before() {
+    ReflectionTestUtils.setField(roomService, "roomStorage", roomStorage);
+  }
+
+  @Test
+  public void shouldTerminateMethodBecauseFoundRoomIsEmpty()
+    throws IOException {
+    Human spiedSender = Mockito.spy(new Human(null));
+    Mockito.doNothing()
+      .when(spiedSender)
+      .send(ArgumentMatchers.eq(new Event(EventType.IT_WAS_A_MACHINE)));
+
+    Room spiedRoom = Mockito.spy(new Room(spiedSender, null));
+
+    Mockito.doReturn(Optional.empty())
+      .when(roomStorage)
+      .findByInterlocutor(ArgumentMatchers.eq(spiedSender));
+
+    roomService.makeChoice(spiedSender, null);
+
+    Mockito.verify(roomStorage, Mockito.times(1))
+      .findByInterlocutor(ArgumentMatchers.eq(spiedSender));
+
+    Mockito.verify(roomService, Mockito.times(0))
+      .excludeRoom(ArgumentMatchers.eq(spiedRoom));
+  }
 
   @Test
   public void shouldSendItWasMachineEventBecauseChoiceEqualsIdkAndIsHumanMethodReturnsFalse()
@@ -50,9 +83,6 @@ public class MakeChoiceUnitTest {
     Mockito.doNothing()
       .when(spiedSender)
       .send(ArgumentMatchers.eq(new Event(EventType.IT_WAS_A_MACHINE)));
-    Mockito.doNothing()
-      .when(spiedSender)
-      .close();
 
     Room spiedRoom = Mockito.spy(new Room(spiedSender, spiedInterlocutor));
     Mockito.doReturn(requiredNumberOfMessagesToMakeChoice)
@@ -62,12 +92,21 @@ public class MakeChoiceUnitTest {
       .when(spiedRoom)
       .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
-    RoomService spiedRoomService = Mockito.spy(roomService);
     Mockito.doReturn(Optional.of(spiedRoom))
-      .when(spiedRoomService)
-      .findRoom(ArgumentMatchers.eq(spiedSender));
+      .when(roomStorage)
+      .findByInterlocutor(ArgumentMatchers.eq(spiedSender));
 
-    spiedRoomService.makeChoice(spiedSender, spiedMakeChoiceEvent);
+    Mockito.doNothing()
+      .when(roomService)
+      .excludeRoom(ArgumentMatchers.eq(spiedRoom));
+
+    roomService.makeChoice(spiedSender, spiedMakeChoiceEvent);
+
+    Mockito.verify(roomStorage, Mockito.times(1))
+      .findByInterlocutor(ArgumentMatchers.eq(spiedSender));
+
+    Mockito.verify(roomService, Mockito.times(1))
+      .excludeRoom(ArgumentMatchers.eq(spiedRoom));
 
     Mockito.verify(spiedRoom, Mockito.times(1))
       .getMessageCounter();
@@ -83,9 +122,6 @@ public class MakeChoiceUnitTest {
 
     Mockito.verify(spiedSender, Mockito.times(1))
       .send(ArgumentMatchers.eq(new Event(EventType.IT_WAS_A_MACHINE)));
-
-    Mockito.verify(spiedSender, Mockito.times(1))
-      .close();
 
     Mockito.verify(spiedSender, Mockito.times(0))
       .send(ArgumentMatchers.eq(new Event(EventType.IT_WAS_A_HUMAN)));
@@ -109,17 +145,11 @@ public class MakeChoiceUnitTest {
     Mockito.doNothing()
       .when(spiedInterlocutor)
       .send(ArgumentMatchers.any(DisconnectEvent.class));
-    Mockito.doNothing()
-      .when(spiedInterlocutor)
-      .close();
 
     Human spiedSender = Mockito.spy(new Human(null));
     Mockito.doNothing()
       .when(spiedSender)
       .send(ArgumentMatchers.eq(new Event(EventType.IT_WAS_A_HUMAN)));
-    Mockito.doNothing()
-      .when(spiedSender)
-      .close();
 
     Room spiedRoom = Mockito.spy(new Room(spiedSender, spiedInterlocutor));
     Mockito.doReturn(requiredNumberOfMessagesToMakeChoice)
@@ -129,12 +159,21 @@ public class MakeChoiceUnitTest {
       .when(spiedRoom)
       .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
-    RoomService spiedRoomService = Mockito.spy(roomService);
     Mockito.doReturn(Optional.of(spiedRoom))
-      .when(spiedRoomService)
-      .findRoom(ArgumentMatchers.eq(spiedSender));
+      .when(roomStorage)
+      .findByInterlocutor(ArgumentMatchers.eq(spiedSender));
 
-    spiedRoomService.makeChoice(spiedSender, spiedMakeChoiceEvent);
+    Mockito.doNothing()
+      .when(roomService)
+      .excludeRoom(ArgumentMatchers.eq(spiedRoom));
+
+    roomService.makeChoice(spiedSender, spiedMakeChoiceEvent);
+
+    Mockito.verify(roomStorage, Mockito.times(1))
+      .findByInterlocutor(ArgumentMatchers.eq(spiedSender));
+
+    Mockito.verify(roomService, Mockito.times(1))
+      .excludeRoom(ArgumentMatchers.eq(spiedRoom));
 
     Mockito.verify(spiedRoom, Mockito.times(1))
       .getMessageCounter();
@@ -148,17 +187,11 @@ public class MakeChoiceUnitTest {
     Mockito.verify(spiedInterlocutor, Mockito.times(1))
       .send(ArgumentMatchers.any(DisconnectEvent.class));
 
-    Mockito.verify(spiedInterlocutor, Mockito.times(1))
-      .close();
-
     Mockito.verify(spiedMakeChoiceEvent, Mockito.times(1))
       .getChoice();
 
     Mockito.verify(spiedSender, Mockito.times(1))
       .send(ArgumentMatchers.eq(new Event(EventType.IT_WAS_A_HUMAN)));
-
-    Mockito.verify(spiedSender, Mockito.times(1))
-      .close();
 
     Mockito.verify(spiedSender, Mockito.times(0))
       .send(ArgumentMatchers.eq(new Event(EventType.IT_WAS_A_MACHINE)));
@@ -183,9 +216,6 @@ public class MakeChoiceUnitTest {
     Mockito.doNothing()
       .when(spiedSender)
       .send(ArgumentMatchers.eq(new Event(EventType.YOU_ARE_RIGHT)));
-    Mockito.doNothing()
-      .when(spiedSender)
-      .close();
 
     Room spiedRoom = Mockito.spy(new Room(spiedSender, spiedInterlocutor));
     Mockito.doReturn(requiredNumberOfMessagesToMakeChoice)
@@ -195,12 +225,21 @@ public class MakeChoiceUnitTest {
       .when(spiedRoom)
       .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
-    RoomService spiedRoomService = Mockito.spy(roomService);
     Mockito.doReturn(Optional.of(spiedRoom))
-      .when(spiedRoomService)
-      .findRoom(ArgumentMatchers.eq(spiedSender));
+      .when(roomStorage)
+      .findByInterlocutor(ArgumentMatchers.eq(spiedSender));
 
-    spiedRoomService.makeChoice(spiedSender, spiedMakeChoiceEvent);
+    Mockito.doNothing()
+      .when(roomService)
+      .excludeRoom(ArgumentMatchers.eq(spiedRoom));
+
+    roomService.makeChoice(spiedSender, spiedMakeChoiceEvent);
+
+    Mockito.verify(roomStorage, Mockito.times(1))
+      .findByInterlocutor(ArgumentMatchers.eq(spiedSender));
+
+    Mockito.verify(roomService, Mockito.times(1))
+      .excludeRoom(ArgumentMatchers.eq(spiedRoom));
 
     Mockito.verify(spiedRoom, Mockito.times(1))
       .getMessageCounter();
@@ -216,9 +255,6 @@ public class MakeChoiceUnitTest {
 
     Mockito.verify(spiedSender, Mockito.times(1))
       .send(ArgumentMatchers.eq(new Event(EventType.YOU_ARE_RIGHT)));
-
-    Mockito.verify(spiedSender, Mockito.times(1))
-      .close();
 
     Mockito.verify(spiedNeuralNetwork, Mockito.times(1))
       .incrementTests_failed();
@@ -239,17 +275,11 @@ public class MakeChoiceUnitTest {
     Mockito.doNothing()
       .when(spiedInterlocutor)
       .send(ArgumentMatchers.any(DisconnectEvent.class));
-    Mockito.doNothing()
-      .when(spiedInterlocutor)
-      .close();
 
     Human spiedSender = Mockito.spy(new Human(null));
     Mockito.doNothing()
       .when(spiedSender)
       .send(ArgumentMatchers.eq(new Event(EventType.YOU_ARE_RIGHT)));
-    Mockito.doNothing()
-      .when(spiedSender)
-      .close();
 
     Room spiedRoom = Mockito.spy(new Room(spiedSender, spiedInterlocutor));
     Mockito.doReturn(requiredNumberOfMessagesToMakeChoice)
@@ -259,12 +289,21 @@ public class MakeChoiceUnitTest {
       .when(spiedRoom)
       .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
-    RoomService spiedRoomService = Mockito.spy(roomService);
     Mockito.doReturn(Optional.of(spiedRoom))
-      .when(spiedRoomService)
-      .findRoom(ArgumentMatchers.eq(spiedSender));
+      .when(roomStorage)
+      .findByInterlocutor(ArgumentMatchers.eq(spiedSender));
 
-    spiedRoomService.makeChoice(spiedSender, spiedMakeChoiceEvent);
+    Mockito.doNothing()
+      .when(roomService)
+      .excludeRoom(ArgumentMatchers.eq(spiedRoom));
+
+    roomService.makeChoice(spiedSender, spiedMakeChoiceEvent);
+
+    Mockito.verify(roomStorage, Mockito.times(1))
+      .findByInterlocutor(ArgumentMatchers.eq(spiedSender));
+
+    Mockito.verify(roomService, Mockito.times(1))
+      .excludeRoom(ArgumentMatchers.eq(spiedRoom));
 
     Mockito.verify(spiedRoom, Mockito.times(1))
       .getMessageCounter();
@@ -278,17 +317,11 @@ public class MakeChoiceUnitTest {
     Mockito.verify(spiedInterlocutor, Mockito.times(1))
       .send(ArgumentMatchers.any(DisconnectEvent.class));
 
-    Mockito.verify(spiedInterlocutor, Mockito.times(1))
-      .close();
-
     Mockito.verify(spiedMakeChoiceEvent, Mockito.times(2))
       .getChoice();
 
     Mockito.verify(spiedSender, Mockito.times(1))
       .send(ArgumentMatchers.eq(new Event(EventType.YOU_ARE_RIGHT)));
-
-    Mockito.verify(spiedSender, Mockito.times(1))
-      .close();
 
     Mockito.verify(neuralNetworkRepository, Mockito.times(0))
       .save(ArgumentMatchers.any(NeuralNetwork.class));
@@ -310,9 +343,6 @@ public class MakeChoiceUnitTest {
     Mockito.doNothing()
       .when(spiedSender)
       .send(ArgumentMatchers.eq(new Event(EventType.YOU_ARE_WRONG)));
-    Mockito.doNothing()
-      .when(spiedSender)
-      .close();
 
     Room spiedRoom = Mockito.spy(new Room(spiedSender, spiedInterlocutor));
     Mockito.doReturn(requiredNumberOfMessagesToMakeChoice)
@@ -322,12 +352,21 @@ public class MakeChoiceUnitTest {
       .when(spiedRoom)
       .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
-    RoomService spiedRoomService = Mockito.spy(roomService);
     Mockito.doReturn(Optional.of(spiedRoom))
-      .when(spiedRoomService)
-      .findRoom(ArgumentMatchers.eq(spiedSender));
+      .when(roomStorage)
+      .findByInterlocutor(ArgumentMatchers.eq(spiedSender));
 
-    spiedRoomService.makeChoice(spiedSender, spiedMakeChoiceEvent);
+    Mockito.doNothing()
+      .when(roomService)
+      .excludeRoom(ArgumentMatchers.eq(spiedRoom));
+
+    roomService.makeChoice(spiedSender, spiedMakeChoiceEvent);
+
+    Mockito.verify(roomStorage, Mockito.times(1))
+      .findByInterlocutor(ArgumentMatchers.eq(spiedSender));
+
+    Mockito.verify(roomService, Mockito.times(1))
+      .excludeRoom(ArgumentMatchers.eq(spiedRoom));
 
     Mockito.verify(spiedRoom, Mockito.times(1))
       .getMessageCounter();
@@ -347,9 +386,6 @@ public class MakeChoiceUnitTest {
     Mockito.verify(spiedNeuralNetwork, Mockito.times(1))
       .incrementTests_passed();
 
-    Mockito.verify(spiedSender, Mockito.times(1))
-      .close();
-
     Mockito.verify(neuralNetworkRepository, Mockito.times(1))
       .save(ArgumentMatchers.eq(spiedNeuralNetwork));
   }
@@ -366,17 +402,11 @@ public class MakeChoiceUnitTest {
     Mockito.doNothing()
       .when(spiedInterlocutor)
       .send(ArgumentMatchers.any(DisconnectEvent.class));
-    Mockito.doNothing()
-      .when(spiedInterlocutor)
-      .close();
 
     Human spiedSender = Mockito.spy(new Human(null));
     Mockito.doNothing()
       .when(spiedSender)
       .send(ArgumentMatchers.eq(new Event(EventType.YOU_ARE_WRONG)));
-    Mockito.doNothing()
-      .when(spiedSender)
-      .close();
 
     Room spiedRoom = Mockito.spy(new Room(spiedSender, spiedInterlocutor));
     Mockito.doReturn(requiredNumberOfMessagesToMakeChoice)
@@ -386,12 +416,21 @@ public class MakeChoiceUnitTest {
       .when(spiedRoom)
       .getAnotherInterlocutor(ArgumentMatchers.eq(spiedSender));
 
-    RoomService spiedRoomService = Mockito.spy(roomService);
     Mockito.doReturn(Optional.of(spiedRoom))
-      .when(spiedRoomService)
-      .findRoom(ArgumentMatchers.eq(spiedSender));
+      .when(roomStorage)
+      .findByInterlocutor(ArgumentMatchers.eq(spiedSender));
 
-    spiedRoomService.makeChoice(spiedSender, spiedMakeChoiceEvent);
+    Mockito.doNothing()
+      .when(roomService)
+      .excludeRoom(ArgumentMatchers.eq(spiedRoom));
+
+    roomService.makeChoice(spiedSender, spiedMakeChoiceEvent);
+
+    Mockito.verify(roomStorage, Mockito.times(1))
+      .findByInterlocutor(ArgumentMatchers.eq(spiedSender));
+
+    Mockito.verify(roomService, Mockito.times(1))
+      .excludeRoom(ArgumentMatchers.eq(spiedRoom));
 
     Mockito.verify(spiedRoom, Mockito.times(1))
       .getMessageCounter();
@@ -405,17 +444,11 @@ public class MakeChoiceUnitTest {
     Mockito.verify(spiedInterlocutor, Mockito.times(1))
       .send(ArgumentMatchers.any(DisconnectEvent.class));
 
-    Mockito.verify(spiedInterlocutor, Mockito.times(1))
-      .close();
-
     Mockito.verify(spiedMakeChoiceEvent, Mockito.times(3))
       .getChoice();
 
     Mockito.verify(spiedSender, Mockito.times(1))
       .send(ArgumentMatchers.eq(new Event(EventType.YOU_ARE_WRONG)));
-
-    Mockito.verify(spiedSender, Mockito.times(1))
-      .close();
 
     Mockito.verify(neuralNetworkRepository, Mockito.times(0))
       .save(ArgumentMatchers.any(NeuralNetwork.class));
