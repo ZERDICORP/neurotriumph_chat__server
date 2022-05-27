@@ -21,8 +21,17 @@ public class Human extends Interlocutor {
     }
   }
 
+  public void sendAndClose(Event event) throws IOException {
+    send(event);
+    close();
+  }
+
   public void close() throws IOException {
     webSocketSession.close();
+  }
+
+  public String getId() {
+    return webSocketSession.getId();
   }
 
   @Override
@@ -32,10 +41,6 @@ public class Human extends Interlocutor {
     }
 
     if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    if (!webSocketSession.getId().equals(((Human) o).webSocketSession.getId())) {
       return false;
     }
 

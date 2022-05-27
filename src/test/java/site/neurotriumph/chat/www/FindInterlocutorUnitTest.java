@@ -27,6 +27,7 @@ import site.neurotriumph.chat.www.pojo.EventType;
 import site.neurotriumph.chat.www.service.LobbyService;
 import site.neurotriumph.chat.www.service.RoomService;
 import site.neurotriumph.chat.www.storage.LobbyStorage;
+import site.neurotriumph.chat.www.util.MockedWebSocketSession;
 import site.neurotriumph.chat.www.util.SpiedRandom;
 
 @RunWith(SpringRunner.class)
@@ -116,7 +117,7 @@ public class FindInterlocutorUnitTest {
 
   @Test
   public void afterSpentTimeInLobby_shouldTerminateMethodBecauseLobbyNotContainsUser() throws IOException {
-    Human human = new Human(null);
+    Human human = new Human(new MockedWebSocketSession());
 
     Mockito.doReturn(false)
       .when(lobbyService)
@@ -130,7 +131,7 @@ public class FindInterlocutorUnitTest {
 
   @Test
   public void shouldAddHumanToLobbyThenScheduleRunnableAndReturnNullBecauseLobbySizeIsZero() {
-    Human human = new Human(null);
+    Human human = new Human(new MockedWebSocketSession());
 
     Mockito.doReturn(1)
       .when(random)
@@ -175,7 +176,7 @@ public class FindInterlocutorUnitTest {
 
   @Test
   public void shouldReturnHumanBecauseLobbySizeIsNotZero() {
-    Human foundHuman = new Human(null);
+    Human foundHuman = new Human(new MockedWebSocketSession());
 
     Mockito.doReturn(1)
       .when(random)
@@ -195,7 +196,7 @@ public class FindInterlocutorUnitTest {
       .when(lobbyService)
       .findMachine();
 
-    Interlocutor interlocutor = lobbyService.findInterlocutor(new Human(null));
+    Interlocutor interlocutor = lobbyService.findInterlocutor(new Human(new MockedWebSocketSession()));
     assertNotNull(interlocutor);
     assertTrue(interlocutor.isHuman());
 
@@ -214,7 +215,7 @@ public class FindInterlocutorUnitTest {
 
   @Test
   public void shouldNotFindNeuralNetworkAndReturnHumanBecauseLobbySizeIsNotZero() {
-    Human foundHuman = new Human(null);
+    Human foundHuman = new Human(new MockedWebSocketSession());
 
     Mockito.doReturn(0)
       .when(random)
@@ -235,7 +236,7 @@ public class FindInterlocutorUnitTest {
       .when(lobbyService)
       .excludeFromLobby(ArgumentMatchers.eq(foundHuman));
 
-    Interlocutor interlocutor = lobbyService.findInterlocutor(new Human(null));
+    Interlocutor interlocutor = lobbyService.findInterlocutor(new Human(new MockedWebSocketSession()));
     assertNotNull(interlocutor);
     assertTrue(interlocutor.isHuman());
 
@@ -265,7 +266,7 @@ public class FindInterlocutorUnitTest {
       .when(lobbyService)
       .findMachine();
 
-    Interlocutor interlocutor = lobbyService.findInterlocutor(new Human(null));
+    Interlocutor interlocutor = lobbyService.findInterlocutor(new Human(new MockedWebSocketSession()));
     assertNotNull(interlocutor);
     assertFalse(interlocutor.isHuman());
 

@@ -14,13 +14,13 @@ import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.util.ReflectionTestUtils;
 import site.neurotriumph.chat.www.interlocutor.Human;
-import site.neurotriumph.chat.www.interlocutor.Interlocutor;
 import site.neurotriumph.chat.www.pojo.ChatMessageEvent;
 import site.neurotriumph.chat.www.pojo.DisconnectEvent;
 import site.neurotriumph.chat.www.pojo.DisconnectReason;
 import site.neurotriumph.chat.www.room.Room;
 import site.neurotriumph.chat.www.service.RoomService;
 import site.neurotriumph.chat.www.storage.RoomStorage;
+import site.neurotriumph.chat.www.util.MockedWebSocketSession;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
@@ -39,10 +39,10 @@ public class SendMachineResponseUnitTest {
 
   @Test
   public void shouldSendEventAndTerminateMethodBecauseResponseIsNull() throws IOException {
-    Human spiedUser = Mockito.spy(new Human(null));
+    Human spiedUser = Mockito.spy(new Human(new MockedWebSocketSession()));
     Mockito.doNothing()
       .when(spiedUser)
-      .send(ArgumentMatchers.eq(new DisconnectEvent(DisconnectReason.INTERLOCUTOR_DISCONNECTED)));
+      .sendAndClose(ArgumentMatchers.eq(new DisconnectEvent(DisconnectReason.INTERLOCUTOR_DISCONNECTED)));
 
     Mockito.doNothing()
       .when(roomService)
@@ -50,11 +50,11 @@ public class SendMachineResponseUnitTest {
 
     roomService.sendMachineResponse(null, spiedUser, null);
 
-    Mockito.verify(spiedUser, Mockito.times(1))
-      .send(ArgumentMatchers.eq(new DisconnectEvent(DisconnectReason.INTERLOCUTOR_DISCONNECTED)));
-
     Mockito.verify(roomService, Mockito.times(1))
       .excludeRoom(ArgumentMatchers.eq(null));
+
+    Mockito.verify(spiedUser, Mockito.times(1))
+      .sendAndClose(ArgumentMatchers.eq(new DisconnectEvent(DisconnectReason.INTERLOCUTOR_DISCONNECTED)));
   }
 
   @Test
@@ -64,9 +64,9 @@ public class SendMachineResponseUnitTest {
 
     ChatMessageEvent chatMessageEvent = new ChatMessageEvent();
 
-    Room spiedRoom = Mockito.spy(new Room(null, null));
+    Room spiedRoom = Mockito.spy(new Room(new Human(new MockedWebSocketSession()), null));
 
-    Interlocutor spiedUser = Mockito.spy(new Human(null));
+    Human spiedUser = Mockito.spy(new Human(new MockedWebSocketSession()));
     Mockito.doNothing()
       .when(spiedUser)
       .send(ArgumentMatchers.eq(chatMessageEvent));

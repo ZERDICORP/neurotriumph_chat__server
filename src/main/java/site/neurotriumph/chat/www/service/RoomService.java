@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import site.neurotriumph.chat.www.entity.NeuralNetwork;
+import site.neurotriumph.chat.www.interlocutor.Human;
 import site.neurotriumph.chat.www.interlocutor.Interlocutor;
 import site.neurotriumph.chat.www.interlocutor.Machine;
 import site.neurotriumph.chat.www.pojo.ChatMessageEvent;
@@ -62,12 +63,14 @@ public class RoomService {
       }
 
       final Room room = foundRoom.get();
-      final Interlocutor interlocutor = room.getAnotherInterlocutor(user);
-      if (interlocutor.isHuman()) {
-        interlocutor.send(new DisconnectEvent(DisconnectReason.INTERLOCUTOR_DISCONNECTED));
-      }
 
       excludeRoom(room);
+
+      final Interlocutor interlocutor = room.getAnotherInterlocutor(user);
+      if (interlocutor.isHuman()) {
+        ((Human) interlocutor).sendAndClose(
+          new DisconnectEvent(DisconnectReason.INTERLOCUTOR_DISCONNECTED));
+      }
     }
   }
 
@@ -81,12 +84,12 @@ public class RoomService {
       }
 
       room = foundRoom.get();
-      excludeRoom(room);
-    }
+      // You can make a choice only after the N-th number of messages.
+      if (room.getMessageCounter() < requiredNumberOfMessagesToMakeChoice) {
+        return;
+      }
 
-    // You can make a choice only after the N-th number of messages.
-    if (room.getMessageCounter() < requiredNumberOfMessagesToMakeChoice) {
-      return;
+      excludeRoom(room);
     }
 
     final Interlocutor interlocutor = room.getAnotherInterlocutor(sender);
@@ -94,7 +97,8 @@ public class RoomService {
     // disconnected from the chat, since his interlocutor has make a
     // choice.
     if (interlocutor.isHuman()) {
-      interlocutor.send(new DisconnectEvent(DisconnectReason.INTERLOCUTOR_MAKE_A_CHOICE));
+      ((Human) interlocutor).sendAndClose(
+        new DisconnectEvent(DisconnectReason.INTERLOCUTOR_MAKE_A_CHOICE));
     }
 
     NeuralNetwork neuralNetwork = null;
@@ -104,7 +108,7 @@ public class RoomService {
 
     // The user finds it difficult to choose.
     if (makeChoiceEvent.getChoice() == Choice.IDK) {
-      sender.send(new Event(interlocutor.isHuman() ?
+      ((Human) sender).sendAndClose(new Event(interlocutor.isHuman() ?
         EventType.IT_WAS_A_HUMAN : EventType.IT_WAS_A_MACHINE));
       if (neuralNetwork != null) {
         neuralNetworkRepository.save(neuralNetwork.incrementTests_passed());
@@ -114,14 +118,14 @@ public class RoomService {
 
     if ((makeChoiceEvent.getChoice() == Choice.ITS_A_HUMAN && interlocutor.isHuman()) ||
       (makeChoiceEvent.getChoice() == Choice.ITS_A_MACHINE && !interlocutor.isHuman())) {
-      sender.send(new Event(EventType.YOU_ARE_RIGHT));
+      ((Human) sender).sendAndClose(new Event(EventType.YOU_ARE_RIGHT));
       if (neuralNetwork != null) {
         neuralNetworkRepository.save(neuralNetwork.incrementTests_failed());
       }
       return;
     }
 
-    sender.send(new Event(EventType.YOU_ARE_WRONG));
+    ((Human) sender).sendAndClose(new Event(EventType.YOU_ARE_WRONG));
     if (neuralNetwork != null) {
       neuralNetworkRepository.save(neuralNetwork.incrementTests_passed());
     }
@@ -224,8 +228,8 @@ public class RoomService {
     // while sending, which means that the api is invalid, in which case we
     // can consider this as a disconnect.
     if (response == null) {
-      user.send(new DisconnectEvent(DisconnectReason.INTERLOCUTOR_DISCONNECTED));
       excludeRoom(room);
+      ((Human) user).sendAndClose(new DisconnectEvent(DisconnectReason.INTERLOCUTOR_DISCONNECTED));
       return;
     }
 

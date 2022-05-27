@@ -16,6 +16,7 @@ import site.neurotriumph.chat.www.interlocutor.Human;
 import site.neurotriumph.chat.www.interlocutor.Interlocutor;
 import site.neurotriumph.chat.www.service.LobbyService;
 import site.neurotriumph.chat.www.storage.LobbyStorage;
+import site.neurotriumph.chat.www.util.MockedWebSocketSession;
 import site.neurotriumph.chat.www.util.SpiedScheduledFuture;
 
 @RunWith(SpringRunner.class)
@@ -33,7 +34,7 @@ public class ExcludeFromLobbyUnitTest {
 
   @Test
   public void shouldCancelTaskAndReturnTrueBecauseTaskIsNotNull() {
-    Interlocutor user = new Human(null);
+    Interlocutor user = new Human(new MockedWebSocketSession());
 
     SpiedScheduledFuture spiedScheduledTask = Mockito.spy(new SpiedScheduledFuture());
     Mockito.doReturn(true)
@@ -55,7 +56,7 @@ public class ExcludeFromLobbyUnitTest {
 
   @Test
   public void shouldNotCancelTaskAndReturnFalseBecauseTaskIsNull() {
-    Interlocutor user = new Human(null);
+    Interlocutor user = new Human(new MockedWebSocketSession());
 
     Mockito.doReturn(null)
       .when(lobbyStorage)

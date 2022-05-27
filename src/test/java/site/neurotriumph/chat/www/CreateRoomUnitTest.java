@@ -21,6 +21,7 @@ import site.neurotriumph.chat.www.pojo.InterlocutorFoundEvent;
 import site.neurotriumph.chat.www.room.Room;
 import site.neurotriumph.chat.www.service.RoomService;
 import site.neurotriumph.chat.www.storage.RoomStorage;
+import site.neurotriumph.chat.www.util.MockedWebSocketSession;
 import site.neurotriumph.chat.www.util.SpiedExecutorService;
 import site.neurotriumph.chat.www.util.SpiedRandom;
 
@@ -56,7 +57,7 @@ public class CreateRoomUnitTest {
       .execute(ArgumentMatchers.any(Runnable.class));
 
     Interlocutor spiedSecondInterlocutor = Mockito.spy(new Machine(null));
-    Interlocutor spiedFirstInterlocutor = Mockito.spy(new Human(null));
+    Interlocutor spiedFirstInterlocutor = Mockito.spy(new Human(new MockedWebSocketSession()));
 
     Room room = new Room(spiedFirstInterlocutor, spiedSecondInterlocutor);
     Room spiedRoom = Mockito.spy(room);
@@ -111,7 +112,7 @@ public class CreateRoomUnitTest {
       .nextInt(ArgumentMatchers.eq(2));
 
     Machine spiedSecondInterlocutor = Mockito.spy(new Machine(null));
-    Interlocutor spiedFirstInterlocutor = Mockito.spy(new Human(null));
+    Interlocutor spiedFirstInterlocutor = Mockito.spy(new Human(new MockedWebSocketSession()));
 
     Room room = new Room(spiedFirstInterlocutor, spiedSecondInterlocutor);
     Room spiedRoom = Mockito.spy(room);
@@ -167,8 +168,8 @@ public class CreateRoomUnitTest {
       .when(random)
       .nextInt(ArgumentMatchers.eq(2));
 
-    Interlocutor spiedSecondInterlocutor = Mockito.spy(new Human(null));
-    Interlocutor spiedFirstInterlocutor = Mockito.spy(new Human(null));
+    Interlocutor spiedSecondInterlocutor = Mockito.spy(new Human(new MockedWebSocketSession()));
+    Interlocutor spiedFirstInterlocutor = Mockito.spy(new Human(new MockedWebSocketSession()));
 
     Room room = new Room(spiedFirstInterlocutor, spiedSecondInterlocutor);
     Room spiedRoom = Mockito.spy(room);
@@ -214,8 +215,8 @@ public class CreateRoomUnitTest {
       .when(random)
       .nextInt(ArgumentMatchers.eq(2));
 
-    Interlocutor spiedSecondInterlocutor = Mockito.spy(new Human(null));
-    Interlocutor spiedFirstInterlocutor = Mockito.spy(new Human(null));
+    Interlocutor spiedSecondInterlocutor = Mockito.spy(new Human(new MockedWebSocketSession()));
+    Interlocutor spiedFirstInterlocutor = Mockito.spy(new Human(new MockedWebSocketSession()));
 
     Room room = new Room(spiedFirstInterlocutor, spiedSecondInterlocutor);
     Room spiedRoom = Mockito.spy(room);

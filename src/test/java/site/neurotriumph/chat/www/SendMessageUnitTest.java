@@ -21,6 +21,7 @@ import site.neurotriumph.chat.www.pojo.ChatMessageEvent;
 import site.neurotriumph.chat.www.room.Room;
 import site.neurotriumph.chat.www.service.RoomService;
 import site.neurotriumph.chat.www.storage.RoomStorage;
+import site.neurotriumph.chat.www.util.MockedWebSocketSession;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
@@ -41,12 +42,12 @@ public class SendMessageUnitTest {
   public void shouldTerminateFunctionBecauseFoundRoomIsEmpty() throws IOException {
     ChatMessageEvent chatMessageEvent = new ChatMessageEvent();
 
-    Interlocutor spiedSecondInterlocutor = Mockito.spy(new Human(null));
+    Interlocutor spiedSecondInterlocutor = Mockito.spy(new Human(new MockedWebSocketSession()));
     Mockito.doNothing()
       .when(spiedSecondInterlocutor)
       .send(ArgumentMatchers.eq(chatMessageEvent));
 
-    Interlocutor spiedFirstInterlocutor = Mockito.spy(new Human(null));
+    Interlocutor spiedFirstInterlocutor = Mockito.spy(new Human(new MockedWebSocketSession()));
     Mockito.doNothing()
       .when(spiedFirstInterlocutor)
       .send(ArgumentMatchers.eq(chatMessageEvent));
@@ -70,12 +71,12 @@ public class SendMessageUnitTest {
   public void shouldTerminateFunctionBecauseFirstInterlocutorNotEqualsSender() throws IOException {
     ChatMessageEvent chatMessageEvent = new ChatMessageEvent();
 
-    Interlocutor spiedSecondInterlocutor = Mockito.spy(new Human(null));
+    Interlocutor spiedSecondInterlocutor = Mockito.spy(new Human(new MockedWebSocketSession()));
     Mockito.doNothing()
       .when(spiedSecondInterlocutor)
       .send(ArgumentMatchers.eq(chatMessageEvent));
 
-    Interlocutor spiedFirstInterlocutor = Mockito.spy(new Human(null));
+    Interlocutor spiedFirstInterlocutor = Mockito.spy(new Human(new MockedWebSocketSession()));
     Mockito.doNothing()
       .when(spiedFirstInterlocutor)
       .send(ArgumentMatchers.eq(chatMessageEvent));
@@ -123,12 +124,12 @@ public class SendMessageUnitTest {
   public void shouldTerminateFunctionBecauseTimeDifferenceLessThanChatMessagingDelay() throws IOException {
     ChatMessageEvent chatMessageEvent = new ChatMessageEvent();
 
-    Interlocutor spiedSecondInterlocutor = Mockito.spy(new Human(null));
+    Interlocutor spiedSecondInterlocutor = Mockito.spy(new Human(new MockedWebSocketSession()));
     Mockito.doNothing()
       .when(spiedSecondInterlocutor)
       .send(ArgumentMatchers.eq(chatMessageEvent));
 
-    Interlocutor spiedFirstInterlocutor = Mockito.spy(new Human(null));
+    Interlocutor spiedFirstInterlocutor = Mockito.spy(new Human(new MockedWebSocketSession()));
     Mockito.doNothing()
       .when(spiedFirstInterlocutor)
       .send(ArgumentMatchers.eq(chatMessageEvent));
@@ -187,7 +188,7 @@ public class SendMessageUnitTest {
       .when(spiedSecondInterlocutor)
       .send(ArgumentMatchers.eq(chatMessageEvent));
 
-    Interlocutor spiedFirstInterlocutor = Mockito.spy(new Human(null));
+    Interlocutor spiedFirstInterlocutor = Mockito.spy(new Human(new MockedWebSocketSession()));
     Mockito.doNothing()
       .when(spiedFirstInterlocutor)
       .send(ArgumentMatchers.eq(chatMessageEvent));
@@ -256,12 +257,12 @@ public class SendMessageUnitTest {
   public void shouldSendMessagesButIsHumanMethodReturnsTrue() throws IOException {
     ChatMessageEvent chatMessageEvent = new ChatMessageEvent();
 
-    Interlocutor spiedSecondInterlocutor = Mockito.spy(new Human(null));
+    Interlocutor spiedSecondInterlocutor = Mockito.spy(new Human(new MockedWebSocketSession()));
     Mockito.doNothing()
       .when(spiedSecondInterlocutor)
       .send(ArgumentMatchers.eq(chatMessageEvent));
 
-    Interlocutor spiedFirstInterlocutor = Mockito.spy(new Human(null));
+    Interlocutor spiedFirstInterlocutor = Mockito.spy(new Human(new MockedWebSocketSession()));
     Mockito.doNothing()
       .when(spiedFirstInterlocutor)
       .send(ArgumentMatchers.eq(chatMessageEvent));
