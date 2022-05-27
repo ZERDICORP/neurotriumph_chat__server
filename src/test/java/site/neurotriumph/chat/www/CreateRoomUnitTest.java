@@ -96,9 +96,6 @@ public class CreateRoomUnitTest {
     Mockito.verify(spiedRoom, Mockito.times(0))
       .swapInterlocutors();
 
-    Mockito.verify(spiedRoom, Mockito.times(1))
-      .getTimePoint();
-
     Mockito.verify(spiedFirstInterlocutor, Mockito.times(1))
       .send(ArgumentMatchers.any(InterlocutorFoundEvent.class));
 
@@ -129,8 +126,7 @@ public class CreateRoomUnitTest {
       .when(spiedSecondInterlocutor)
       .send(ArgumentMatchers.eq(new Event(EventType.INIT_CHAT_MESSAGE)));
 
-    InterlocutorFoundEvent interlocutorFoundEventForFirstInterlocutor = new InterlocutorFoundEvent(
-      room.getTimePoint(), false);
+    InterlocutorFoundEvent interlocutorFoundEventForFirstInterlocutor = new InterlocutorFoundEvent(false);
     Mockito.doNothing()
       .when(spiedFirstInterlocutor)
       .send(ArgumentMatchers.eq(interlocutorFoundEventForFirstInterlocutor));
@@ -156,9 +152,6 @@ public class CreateRoomUnitTest {
 
     Mockito.verify(spiedRoom, Mockito.times(1))
       .swapInterlocutors();
-
-    Mockito.verify(spiedRoom, Mockito.times(1))
-      .getTimePoint();
 
     Mockito.verify(spiedFirstInterlocutor, Mockito.times(1))
       .send(ArgumentMatchers.eq(interlocutorFoundEventForFirstInterlocutor));
@@ -207,9 +200,6 @@ public class CreateRoomUnitTest {
     Mockito.verify(spiedRoom, Mockito.times(1))
       .swapInterlocutors();
 
-    Mockito.verify(spiedRoom, Mockito.times(2))
-      .getTimePoint();
-
     Mockito.verify(spiedFirstInterlocutor, Mockito.times(1))
       .send(ArgumentMatchers.any(InterlocutorFoundEvent.class));
 
@@ -236,14 +226,12 @@ public class CreateRoomUnitTest {
         ArgumentMatchers.eq(spiedFirstInterlocutor),
         ArgumentMatchers.eq(spiedSecondInterlocutor));
 
-    InterlocutorFoundEvent interlocutorFoundEventForSecondInterlocutor = new InterlocutorFoundEvent(
-      room.getTimePoint(), false);
+    InterlocutorFoundEvent interlocutorFoundEventForSecondInterlocutor = new InterlocutorFoundEvent(false);
     Mockito.doNothing()
       .when(spiedSecondInterlocutor)
       .send(ArgumentMatchers.eq(interlocutorFoundEventForSecondInterlocutor));
 
-    InterlocutorFoundEvent interlocutorFoundEventForFirstInterlocutor = new InterlocutorFoundEvent(
-      room.getTimePoint(), true);
+    InterlocutorFoundEvent interlocutorFoundEventForFirstInterlocutor = new InterlocutorFoundEvent(true);
     Mockito.doNothing()
       .when(spiedFirstInterlocutor)
       .send(ArgumentMatchers.eq(interlocutorFoundEventForFirstInterlocutor));
@@ -260,9 +248,6 @@ public class CreateRoomUnitTest {
 
     Mockito.verify(spiedRoom, Mockito.times(0))
       .swapInterlocutors();
-
-    Mockito.verify(spiedRoom, Mockito.times(2))
-      .getTimePoint();
 
     Mockito.verify(spiedFirstInterlocutor, Mockito.times(1))
       .send(ArgumentMatchers.eq(interlocutorFoundEventForFirstInterlocutor));

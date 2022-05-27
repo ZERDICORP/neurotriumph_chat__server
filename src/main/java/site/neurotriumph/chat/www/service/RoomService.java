@@ -191,11 +191,11 @@ public class RoomService {
     }
 
     // Notifying the user that he has found an interlocutor.
-    firstInterlocutor.send(new InterlocutorFoundEvent(room.getTimePoint(), rand == 0));
+    firstInterlocutor.send(new InterlocutorFoundEvent(rand == 0));
 
     // If the second interlocutor is a human, we also notify him.
     if (secondInterlocutor.isHuman()) {
-      secondInterlocutor.send(new InterlocutorFoundEvent(room.getTimePoint(), rand == 1));
+      secondInterlocutor.send(new InterlocutorFoundEvent(rand == 1));
       return;
     }
 

@@ -60,7 +60,6 @@ public class FindInterlocutorIntegrationTest {
 
     final InterlocutorFoundEvent interlocutorFoundEvent = (InterlocutorFoundEvent) eventQueue.poll();
     assertNotNull(interlocutorFoundEvent);
-    assertNotNull(interlocutorFoundEvent.getTimeLabel());
     assertEquals(EventType.INTERLOCUTOR_FOUND, interlocutorFoundEvent.getType());
   }
 }

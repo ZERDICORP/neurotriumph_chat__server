@@ -9,15 +9,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @EqualsAndHashCode
 public class InterlocutorFoundEvent extends Event {
-  private Date timeLabel;
   private boolean ableToWrite;
 
   {
     type = EventType.INTERLOCUTOR_FOUND;
   }
 
-  public InterlocutorFoundEvent(Date timeLabel, boolean ableToWrite) {
-    this.timeLabel = timeLabel;
+  public InterlocutorFoundEvent(boolean ableToWrite) {
     this.ableToWrite = ableToWrite;
   }
 }
