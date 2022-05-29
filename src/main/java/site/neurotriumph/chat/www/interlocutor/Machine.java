@@ -29,6 +29,8 @@ public class Machine extends Interlocutor {
   public Machine(NeuralNetwork neuralNetwork) {
     super(false);
     this.neuralNetwork = neuralNetwork;
+
+    headers.add("API-Secret", neuralNetwork.getApi_secret());
   }
 
   public Machine onError(Runnable onError) {
