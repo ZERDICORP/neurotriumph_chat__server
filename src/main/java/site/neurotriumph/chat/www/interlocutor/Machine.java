@@ -42,7 +42,8 @@ public class Machine extends Interlocutor {
   public void send(Event event) throws IOException {
     try {
       final HttpEntity<Event> entity = new HttpEntity<>(event, headers);
-      response = restTemplate.postForObject(neuralNetwork.getApi_root(), entity, ChatMessageEvent.class);
+      response = restTemplate.postForObject(neuralNetwork.getApi_root() + "/reply", entity,
+        ChatMessageEvent.class);
     } catch (RestClientException e) {
       response = null;
       onError.run();
