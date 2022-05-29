@@ -1,12 +1,10 @@
 package site.neurotriumph.chat.www.interlocutor;
 
-import java.io.IOException;
 import java.util.Collections;
 import lombok.Getter;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import site.neurotriumph.chat.www.entity.NeuralNetwork;
 import site.neurotriumph.chat.www.pojo.ChatMessageEvent;
@@ -39,12 +37,12 @@ public class Machine extends Interlocutor {
   }
 
   @Override
-  public void send(Event event) throws IOException {
+  public void send(Event event) {
     try {
       final HttpEntity<Event> entity = new HttpEntity<>(event, headers);
       response = restTemplate.postForObject(neuralNetwork.getApi_root() + "/reply", entity,
         ChatMessageEvent.class);
-    } catch (RestClientException e) {
+    } catch (Exception e) {
       response = null;
       onError.run();
     }
